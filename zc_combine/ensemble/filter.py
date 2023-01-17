@@ -30,7 +30,7 @@ def above_quantile(df, key, quantile=0.9):
 def filter_by_zc(df, filter_zc, quantile=0.9, mode='u'):
     if isinstance(filter_zc, str) or len(filter_zc) == 1:
         filter_zc = filter_zc if isinstance(filter_zc, str) else filter_zc[0]
-        return above_quantile(df, filter_zc, quantile)
+        return above_quantile(df, filter_zc, quantile).index
 
     if mode == 's' or mode == 'stack':
         top_df = df
@@ -38,7 +38,7 @@ def filter_by_zc(df, filter_zc, quantile=0.9, mode='u'):
         for i, zc in enumerate(filter_zc):
             q = quantile[i] if isinstance(quantile, list) else quantile
             top_df = above_quantile(top_df, zc, q)
-        return top_df
+        return top_df.index
 
     top_nets = [above_quantile(df, zc, quantile).index for zc in filter_zc]
     if mode == 'u' or mode == 'union':
@@ -48,7 +48,11 @@ def filter_by_zc(df, filter_zc, quantile=0.9, mode='u'):
     else:
         raise ValueError(f"Invalid mode: {mode}, possible u (union), i (intersection), s (stack).")
 
-    return df.loc[index]
+    return index
+
+
+def filter_by_zc_task(dfs, filter_zc, quantile=0.9, mode='u'):
+    return {task: filter_by_zc(df, filter_zc, quantile=quantile, mode=mode) for task, df in dfs.items()}
 
 
 def filter_by_index(df, index=None):
@@ -61,6 +65,6 @@ def get_above_quantile(df, key, acc_quantile=0.9, filter_index=None):
 
 
 def get_top_k(df, key, top_k=3, filter_index=None):
-    best_nets = df.nlargest(key, top_k)
+    best_nets = df.nlargest(top_k, key)
     return filter_by_index(best_nets, index=filter_index)
 

@@ -28,3 +28,10 @@ def get_stats_zc(df, zc, acc_quantile=0.9, top_k=3, x_key='val_accs', round_tau=
         res['df'] = df
 
     return res
+
+
+def eval_zc(dfs, zc, filter_index=None, **kwargs):
+    def get_idx(task):
+        return None if filter_index is None else filter_index[task]
+
+    return {task: get_stats_zc(df, zc, filter_index=get_idx(task), **kwargs) for task, df in dfs.items()}
