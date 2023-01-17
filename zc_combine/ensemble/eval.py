@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats
-from zc_combine.ensemble.filter import filter_by_index, get_above_quantile, get_top_k
+from zc_combine.ensemble.filter import filter_by_index, get_above_quantile, get_top_k, filter_by_zc_task
 
 
 def get_tau(accs, scores, round_places=None):
@@ -35,3 +35,20 @@ def eval_zc(dfs, zc, filter_index=None, **kwargs):
         return None if filter_index is None else filter_index[task]
 
     return {task: get_stats_zc(df, zc, filter_index=get_idx(task), **kwargs) for task, df in dfs.items()}
+
+
+def eval_combined_proxies(dfs, zc_list, zc_quantile=0.9, **kwargs):
+    n_proxies = len(zc_list)
+    scores = {task: np.zeros((n_proxies, n_proxies)) for task in dfs.keys()}
+    inds = {p: i for i, p in enumerate(zc_list)}
+
+    for filter_zc in zc_list:
+        for rank_zc in zc_list:
+            dfs_filter = filter_by_zc_task(dfs, filter_zc, quantile=zc_quantile)
+            dfs_filtered = eval_zc(dfs, rank_zc, filter_index=dfs_filter, **kwargs)
+
+            for task, df in dfs_filtered.items():
+                tau = df['all']['tau']
+                scores[task][inds[filter_zc], inds[rank_zc]] = tau
+
+    return {p: i for i, p in inds.items()}, scores
