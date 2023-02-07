@@ -75,8 +75,11 @@ def plot_top_quantile_zc(dfs_stats, zc, title, zc_quantile=0.9, **kwargs):
 
 def plot_networks_zc(dfs_stats, zc, title, all_networks=True, top_networks=True, top_line=False, zc_quantile=0.9,
                      x_key='val_accs', figsize=(12, 9), subplots_adjust=None, legend_loc='upper left', legend=None,
-                     drop_outliers=True, zscore=3.5, margin=0.05):
-    _tau_str = "$\\tau =$"
+                     drop_outliers=True, zscore=3.5, margin=0.05, key='tau'):
+    if key == 'tau':
+        _tau_str = "$\\tau =$"
+    else:
+        _tau_str = f"{key} $=$"
     assert all_networks or top_networks
 
     def plot_func(task, df_stats, ax):
@@ -87,14 +90,14 @@ def plot_networks_zc(dfs_stats, zc, title, all_networks=True, top_networks=True,
 
         if all_networks:
             all_nets = df_stats['all']
-            all_nets, tau = df.loc[all_nets['index']], all_nets['tau']
+            all_nets, tau = df.loc[all_nets['index']], all_nets[key]
             titles.append(f"{_tau_str} {tau}")
             sns.scatterplot(data=all_nets, x=x_key, y=zc, ax=ax)
 
         if top_networks:
             # plot top n %
             top_nets = df_stats['top_quantile']
-            top_nets, tau = df.loc[top_nets['index']], top_nets['tau']
+            top_nets, tau = df.loc[top_nets['index']], top_nets[key]
             titles.append(f"top nets {_tau_str} {tau}")
             sns.scatterplot(data=top_nets, x=x_key, y=zc, ax=ax)
 
