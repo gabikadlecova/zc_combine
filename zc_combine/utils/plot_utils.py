@@ -111,12 +111,17 @@ def plot_networks_zc(dfs_stats, zc, title, all_networks=True, top_networks=True,
             plot_quantile_line(df, zc, ax, vmin, vmax, quantile=zc_quantile)
 
         if drop_outliers:
-            df = all_nets if all_networks else top_nets
-            df_noout = df[(np.abs(stats.zscore(df[x_key])) < zscore)]
-            xmin, xmax = df_noout[x_key].min(), df_noout[x_key].max()
-            m = margin * (xmax - xmin)
+            def _drop(what):
+                df = all_nets if all_networks else top_nets
+                df_noout = df[(np.abs(stats.zscore(df[what])) < zscore)]
+                xmin, xmax = df_noout[what].min(), df_noout[what].max()
+                m = margin * (xmax - xmin)
+                return xmin - m, xmax + m
 
-            ax.set_xlim(xmin - m, xmax + m)
+            xmin, xmax = _drop(x_key)
+            ax.set_xlim(xmin, xmax)
+            ymin, ymax = _drop(zc)
+            ax.set_ylim(ymin, ymax)
 
         ax.set_title(ax_title + ', '.join(titles))
 

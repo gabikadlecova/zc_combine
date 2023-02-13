@@ -16,15 +16,32 @@ def get_corr(accs, scores, round_places=None):
 def get_stats_zc(df, zc, acc_quantile=0.9, top_k=3, x_key='val_accs', round_tau=2, filter_index=None, include_df=True):
     res = {}
 
+    def _get_filtered_stats(filt):
+        tau = get_tau(filt[x_key], filt[zc], round_places=round_tau)
+        corr = get_corr(filt[x_key], filt[zc], round_places=round_tau)
+        return tau, corr
+
+    def _get_acc_stats(filt):
+        stats_df = df[[x_key]].copy()
+        stats_df['rank'] = stats_df[x_key].rank(ascending=False)
+        acc_dropped, acc_filtered = stats_df.drop(index=filt.index), stats_df.loc[filt.index]
+        res = {'ranking_full': stats_df, 'ranking_filter': acc_filtered, 'ranking_drop': acc_dropped}
+        funcs = {'median': np.median, 'min': np.min, 'mean': np.mean, 'max': np.max}
+        for fname, f in funcs.items():
+            res[f"acc_{fname}"], res[f"rank_{fname}"] = f(acc_filtered[x_key]), f(acc_filtered['rank'])
+            res[f"acc_{fname}_drop"], res[f"rank_{fname}_drop"] = f(acc_dropped[x_key]), f(acc_dropped['rank'])
+
+        return res
+
     filtered_df = filter_by_index(df, index=filter_index)
-    tau = get_tau(filtered_df[x_key], filtered_df[zc], round_places=round_tau)
-    corr = get_corr(filtered_df[x_key], filtered_df[zc], round_places=round_tau)
-    res['all'] = {'tau': tau, 'corr': corr, 'index': filtered_df.index}
+    tau, corr = _get_filtered_stats(filtered_df)
+    stats = _get_acc_stats(filtered_df)
+
+    res['all'] = {'tau': tau, 'corr': corr, 'index': filtered_df.index, **stats}
 
     # top n %
     top_nets = get_above_quantile(df, x_key, acc_quantile=acc_quantile, filter_index=filter_index)
-    tau = get_tau(top_nets[x_key], top_nets[zc], round_places=round_tau)
-    corr = get_corr(top_nets[x_key], top_nets[zc], round_places=round_tau)
+    tau, corr = _get_filtered_stats(top_nets)
     res['top_quantile'] = {'tau': tau, 'corr': corr, 'quantile': acc_quantile, 'index': top_nets.index}
 
     # top k networks
