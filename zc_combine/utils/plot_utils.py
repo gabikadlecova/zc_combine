@@ -115,6 +115,8 @@ def plot_networks_zc(dfs_stats, zc, title, all_networks=True, top_networks=True,
                 df = all_nets if all_networks else top_nets
                 df_noout = df[(np.abs(stats.zscore(df[what])) < zscore)]
                 xmin, xmax = df_noout[what].min(), df_noout[what].max()
+                if np.isnan(xmin) and np.isnan(xmax):
+                    return -1, 1
                 m = margin * (xmax - xmin)
                 return xmin - m, xmax + m
 
