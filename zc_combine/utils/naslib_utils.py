@@ -12,6 +12,18 @@ def load_search_space(naslib_path, name):
         return json.load(f)
 
 
+def load_search_spaces_multiple(naslib_path, names, dataset_key=None):
+    all_data = {}
+    for name in names:
+        data = load_search_space(naslib_path, name)
+        for k, v in data.items():
+            if dataset_key is not None and k != dataset_key:
+                continue
+            all_data[f"{name}-{k}"] = v
+
+    return all_data
+
+
 def parse_scores(search_space):
     search_space_keys = [k for k in search_space.keys()]
 
@@ -32,6 +44,11 @@ def parse_scores(search_space):
 
             val_accs[task].append(arch_scores['val_accuracy'])
             nets[task].append(net)
+
+        # remove invalid scores
+        for s in score_keys:
+            if all([val == 0 for val in scores[task][s]]):
+                scores[task].pop(s)
 
     # datasets
     dfs = {}

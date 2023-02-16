@@ -1,4 +1,6 @@
 from functools import reduce
+from typing import List, Union
+
 import numpy as np
 
 
@@ -27,11 +29,20 @@ def above_quantile(df, key, quantile=0.9):
     return df[df[key] > quantile]
 
 
-def filter_by_zc(df, filter_zc, quantile=0.9, mode='u'):
-    if isinstance(filter_zc, str) or len(filter_zc) == 1:
-        filter_zc = filter_zc if isinstance(filter_zc, str) else filter_zc[0]
-        return above_quantile(df, filter_zc, quantile).index
+def filter_by_zc(df, filter_zc, quantile: Union[float, List[float]] = 0.9, mode='u'):
+    if isinstance(filter_zc, str):
+        filter_zc = [filter_zc]
 
+    # return None if some proxy is not computed for this df
+    for fz in filter_zc:
+        if fz not in df.columns:
+            return None
+
+    # only one filter proxy
+    if len(filter_zc) == 1:
+        return above_quantile(df, filter_zc[0], quantile).index
+
+    # multiple filter proxies
     if mode == 's' or mode == 'stack':
         top_df = df
         # take top q using the next proxy
@@ -40,7 +51,12 @@ def filter_by_zc(df, filter_zc, quantile=0.9, mode='u'):
             top_df = above_quantile(top_df, zc, q)
         return top_df.index
 
-    top_nets = [above_quantile(df, zc, quantile).index for zc in filter_zc]
+    if isinstance(quantile, float):
+        top_nets = [above_quantile(df, zc, quantile).index for zc in filter_zc]
+    else:
+        assert len(quantile) == len(filter_zc)
+        top_nets = [above_quantile(df, zc, q).index for zc, q in zip(filter_zc, quantile)]
+
     if mode == 'u' or mode == 'union':
         index = reduce(lambda ix1, ix2: ix1.union(ix2), top_nets)
     elif mode == 'i' or mode == 'intersection':
@@ -49,10 +65,6 @@ def filter_by_zc(df, filter_zc, quantile=0.9, mode='u'):
         raise ValueError(f"Invalid mode: {mode}, possible u (union), i (intersection), s (stack).")
 
     return index
-
-
-def filter_by_zc_task(dfs, filter_zc, quantile=0.9, mode='u'):
-    return {task: filter_by_zc(df, filter_zc, quantile=quantile, mode=mode) for task, df in dfs.items()}
 
 
 def filter_by_index(df, index=None):
@@ -67,4 +79,3 @@ def get_above_quantile(df, key, acc_quantile=0.9, filter_index=None):
 def get_top_k(df, key, top_k=3, filter_index=None):
     best_nets = df.nlargest(top_k, key)
     return filter_by_index(best_nets, index=filter_index)
-
