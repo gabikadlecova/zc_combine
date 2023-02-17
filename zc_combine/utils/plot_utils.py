@@ -15,7 +15,7 @@ def plot_accuracy_histogram(dfs, figsize=(12, 9), title=None, bins=50, subplots_
     if title is None:
         title = "Histogram of validation accuracies per task."
 
-    for tdf, ax in zip(dfs, axs):
+    for tdf, ax in zip(dfs.items(), axs):
         task, df = tdf
         ax.set_title(task)
         sns.histplot(df['val_accs'], ax=ax, bins=bins)
@@ -47,10 +47,12 @@ def plot_networks_by_zc(dfs_stats, zc, bench_name, accuracy_q=0.9, net_k=3, all_
     title = f"{bench_name} - zero cost proxy score ({zc}) by validation accuracy{suff}."
 
     legend = _get_legend(accuracy_q, net_k)
+    if not all_networks:
+        legend = legend[1:]
     if top_line:
-        legend += f"Zc score - {zc_quantile} quantile"
+        legend.append(f"Zc score - {zc_quantile} quantile")
 
-    plot = _plot_dfs_stats(dfs_stats, zc, title, subplots_adjust=0.9, legend=legend, legend_loc='lower right',
+    plot = _plot_dfs_stats(dfs_stats, zc, title, legend=legend, legend_loc='lower right', all_networks=all_networks,
                            top_line=top_line, zc_quantile=zc_quantile, **kwargs)
     return plot
 
@@ -62,7 +64,7 @@ def plot_filtered_by_zc(dfs, filter_zc, rank_zc, bench_name, key='tau', quantile
     title = f"{bench_name} - nets over {qtitle}% quantile in {filter_zc}, {rank_zc} by validation accuracy."
     legend = _get_legend(accuracy_q, net_k)
 
-    plot = _plot_dfs_stats(dfs, rank_zc, title, subplots_adjust=0.9, legend=legend, legend_loc='lower right',
+    plot = _plot_dfs_stats(dfs, rank_zc, title, legend=legend, legend_loc='lower right',
                            key=key, zscore=zscore, **kwargs)
     return plot
 
@@ -139,13 +141,13 @@ def plot_zc_per_df(task, df_stats, zc, ax=None, x_key='val_acc', all_networks=Tr
 
 
 def _plot_dfs_stats(dfs_stats, zc, title, all_networks=True, top_networks=True, top_line=False, zc_quantile=0.9,
-                    x_key='val_accs', figsize=(12, 9), subplots_adjust=None, legend_loc='upper left', legend=None,
+                    x_key='val_accs', figsize=(12, 9), subplots_adjust=0.9, legend_loc='upper left', legend=None,
                     drop_outliers=True, zscore=3.5, margin=0.05, key='tau'):
-    fig, axs = do_subplots(len(dfs_stats), figsize=figsize)
-
     palette = sns.color_palette()
     if not all_networks:
         sns.set_palette(palette=palette[1:])
+
+    fig, axs = do_subplots(len(dfs_stats), figsize=figsize)
 
     for df_item, ax in zip(dfs_stats.items(), axs):
         task, df = df_item
