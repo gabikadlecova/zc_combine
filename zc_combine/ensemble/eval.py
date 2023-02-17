@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import scipy.stats
 from zc_combine.ensemble.filter import filter_by_index, get_above_quantile, get_top_k, filter_by_zc
 
@@ -76,3 +77,10 @@ def eval_combined_proxies(df, zc_quantile=0.9, key='tau', **kwargs):
             scores[inds[filter_zc], inds[rank_zc]] = tau
 
     return {p: i for i, p in inds.items()}, scores
+
+
+def get_stats_ranks(dfs):
+    ranks = {t: {k: v for k, v in d['stats'].items() if 'ranking' in k} for t, d in dfs.items()}
+    stats = {t: {k: v for k, v in d['stats'].items() if k != 'index' and 'ranking' not in k} for t, d in dfs.items()}
+
+    return pd.DataFrame(stats), ranks
