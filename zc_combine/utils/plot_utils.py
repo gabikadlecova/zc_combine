@@ -69,7 +69,7 @@ def plot_filtered_by_zc(dfs, filter_zc, rank_zc, bench_name, key='tau', quantile
     return plot
 
 
-def plot_filtered_ranks(stats, key='rank', figsize=None):
+def plot_filtered_ranks(stats, benchmark, dataset, key='rank', figsize=None):
     assert key == 'rank' or key == 'val_accs'
     stats = {k: stats[k].copy() for k in ['ranking_filter', 'ranking_drop']}
 
@@ -78,8 +78,10 @@ def plot_filtered_ranks(stats, key='rank', figsize=None):
     rdata = pd.concat([stats['ranking_filter'], stats['ranking_drop']])
 
     fig = plt.figure(figsize=figsize)
-    fig.suptitle(f"Histograms of filtered and dropped network {'ranks' if key == 'rank' else 'accuracies'}.")
+    fig.suptitle(f"Distribution of network {'ranks' if key == 'rank' else 'accuracies'}"
+                 f" ({benchmark} - {dataset}).")
     sns.histplot(data=rdata, x=key, hue='name')
+    plt.tight_layout()
     return fig
 
 

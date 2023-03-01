@@ -83,4 +83,10 @@ def get_stats_ranks(dfs):
     ranks = {t: {k: v for k, v in d['stats'].items() if 'ranking' in k} for t, d in dfs.items()}
     stats = {t: {k: v for k, v in d['stats'].items() if k != 'index' and 'ranking' not in k} for t, d in dfs.items()}
 
+    # also include tau and correlation to the df
+    for t, d in dfs.items():
+        for key, key_name in [('all', ''), ('top_quantile', 'top_')]:
+            stats[t][f'{key_name}tau'] = d[key]['tau']
+            stats[t][f'{key_name}corr'] = d[key]['corr']
+
     return pd.DataFrame(stats), ranks

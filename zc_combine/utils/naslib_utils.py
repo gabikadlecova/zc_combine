@@ -1,5 +1,7 @@
 import glob
 import json
+
+import numpy as np
 import pandas as pd
 
 
@@ -24,7 +26,7 @@ def load_search_spaces_multiple(naslib_path, names, dataset_key=None):
     return all_data
 
 
-def parse_scores(search_space):
+def parse_scores(search_space, include_random=True):
     search_space_keys = [k for k in search_space.keys()]
 
     # get data of some random architecture
@@ -53,6 +55,17 @@ def parse_scores(search_space):
     # datasets
     dfs = {}
     for k in val_accs.keys():
+        # random ordering
+        if include_random:
+            scores[k]['random'] = _generate_random_score(len(val_accs[k]))
+
         dfs[k] = pd.DataFrame({'net': nets[k], 'val_accs': val_accs[k], **scores[k]})
 
     return dfs
+
+
+def _generate_random_score(length, seed=42):
+    gen = np.random.default_rng(seed=seed)
+    scores = np.arange(length)
+    gen.shuffle(scores)
+    return scores
