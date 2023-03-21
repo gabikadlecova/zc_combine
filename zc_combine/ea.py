@@ -4,7 +4,9 @@
 import random
 import copy
 
-from zc_combine.search_utils import net_from_spec, random_net, NetData, zc_warmup
+import numpy as np
+
+from zc_combine.search_utils import net_from_spec, random_net, NetData, zc_warmup, get_spec_map
 
 
 # TODO check if it works the same for their spec and my spec (in notebook)
@@ -64,9 +66,10 @@ def run_evolution_search(df, zc_warmup_func=None, zc_mutate_func=None, max_train
                          pool_size=64,
                          tournament_size=10,
                          zero_cost_warmup=0):
-    best_valids = [0.0]
+    best_valids = [-np.inf]
     pool = []  # (validation, spec) tuples
     num_trained_models = 0
+    spec_map = get_spec_map(df)
 
     # fill the initial pool
     zero_cost_pool = zc_warmup(df, zc_warmup_func, zero_cost_warmup) if zc_warmup_func is not None else None
@@ -88,6 +91,10 @@ def run_evolution_search(df, zc_warmup_func=None, zc_mutate_func=None, max_train
             new_net = zc_mutate_func(best_net)
         else:
             new_net = mutate_spec(best_net)
+
+        new_net = net_from_spec(new_net, df, spec_map)
+        if new_net is None:
+            continue
 
         num_trained_models += 1
         _update(new_net, pool, best_valids)

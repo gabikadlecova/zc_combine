@@ -37,15 +37,18 @@ def random_net(df):
 
 def net_from_spec(spec, df, spec_map):
     arch_str = _spec_to_arch_str(spec)
+    if arch_str not in spec_map:
+        return None
+
     idx = spec_map[arch_str]
     return NetData(idx, df)
 
 
 def _get_spec_from_arch_str(arch_str):
-    spec = arch_str.strip('()').split(',')
-    return spec
+    spec = arch_str.strip('()').split(', ')
+    return [int(i) for i in spec]
 
 
 def _spec_to_arch_str(spec):
-    return f"({','.join(spec)})"
+    return f"({', '.join([str(i) for i in spec])})"
 

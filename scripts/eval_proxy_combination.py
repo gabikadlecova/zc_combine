@@ -30,7 +30,7 @@ def get_df_stats(dfs, filter_zc, rank_zc, quantile, mode):
         dfs_filt = {task: filter_by_zc(df, filter_zc, quantile=quantile, mode=mode) for task, df in dfs.items()}
     else:
         dfs_filt = {task: None for task in dfs.keys()}
-    return {task: get_stats_zc(df, rank_zc, filter_index=dfs_filt[task]) for task, df in dfs.items()}
+    return {task: get_stats_zc(df, rank_zc, filter_index=dfs_filt[task]) for task, df in dfs.items() if rank_zc in df.columns}
 
 
 def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, dataset):
@@ -86,6 +86,7 @@ def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path
     df_stats = get_df_stats(dfs, filter_zc, rank_zc, quantile, mode)
 
     figsize = (14, 10) if not plot_all else (17, 7)
+    #figsize = (9, 7)
     if filter_zc is None:
         plot_networks_by_zc(df_stats, rank_zc, benchmark, top_line=True, subplots_adjust=0.87, zc_quantile=quantile,
                             key=key, figsize=figsize)

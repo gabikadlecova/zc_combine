@@ -52,7 +52,7 @@ def plot_networks_by_zc(dfs_stats, zc, bench_name, accuracy_q=0.9, net_k=3, all_
     if top_line:
         legend.append(f"Zc score - {zc_quantile} quantile")
 
-    plot = _plot_dfs_stats(dfs_stats, zc, title, legend=legend, legend_loc='lower right', all_networks=all_networks,
+    plot = _plot_dfs_stats(dfs_stats, zc, title, legend=legend, legend_loc='upper left', all_networks=all_networks,
                            top_line=top_line, zc_quantile=zc_quantile, **kwargs)
     return plot
 
@@ -64,7 +64,7 @@ def plot_filtered_by_zc(dfs, filter_zc, rank_zc, bench_name, key='tau', quantile
     title = f"{bench_name} - nets over {qtitle}% quantile in {filter_zc}, {rank_zc} by validation accuracy."
     legend = _get_legend(accuracy_q, net_k)
 
-    plot = _plot_dfs_stats(dfs, rank_zc, title, legend=legend, legend_loc='lower right',
+    plot = _plot_dfs_stats(dfs, rank_zc, title, legend=legend, legend_loc='upper left',
                            key=key, zscore=zscore, **kwargs)
     return plot
 
@@ -179,13 +179,17 @@ def _get_legend(acc_q, net_k):
 
 
 def do_subplots(n_total, columns=3, **kwargs):
+    if n_total == 1:
+        columns = 1
+
     fig, axs = plt.subplots(int(np.ceil(n_total / columns)), columns, **kwargs)
-    axs = axs.flatten()
+    axs = axs.flatten() if columns > 1 else [axs]
 
     for i in range(n_total, len(axs)):
         fig.delaxes(axs[i])
 
-    return fig, axs.flatten()
+    axs = axs.flatten() if columns > 1 else axs
+    return fig, axs
 
 
 def plot_quantile_line(df, key, ax, vmin, vmax, quantile=0.9, horizontal=True, color='r'):
@@ -198,7 +202,7 @@ def plot_quantile_line(df, key, ax, vmin, vmax, quantile=0.9, horizontal=True, c
 
 
 def _plot_body(fig, title, subplots_adjust=None):
-    fig.suptitle(title)
+    #fig.suptitle(title)
     fig.tight_layout()
     if subplots_adjust is not None:
         plt.subplots_adjust(top=subplots_adjust)
