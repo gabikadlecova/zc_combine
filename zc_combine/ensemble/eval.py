@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.stats
+from sklearn.metrics import ndcg_score
 from zc_combine.ensemble.filter import filter_by_index, get_above_quantile, get_top_k, filter_by_zc
 
 
@@ -12,6 +13,11 @@ def get_tau(accs, scores, round_places=None):
 def get_corr(accs, scores, round_places=None):
     corr, _ = scipy.stats.spearmanr(accs, scores)
     return corr if round_places is None else np.round(corr, round_places)
+
+
+def get_ndcg(accs, scores, round_places=None, top_k=None):
+    ndcg = ndcg_score(accs.to_numpy()[np.newaxis], scores.to_numpy()[np.newaxis], ignore_ties=True, k=top_k)
+    return ndcg if round_places is None else np.round(ndcg, round_places)
 
 
 def get_accuracy_ranks(df, filter_index, x_key='val_accs', funcs=None):
@@ -35,22 +41,28 @@ def get_accuracy_ranks(df, filter_index, x_key='val_accs', funcs=None):
 def get_stats_zc(df, zc, acc_quantile=0.9, top_k=3, x_key='val_accs', round_tau=2, filter_index=None, include_df=True):
     res = {}
 
-    def _get_filtered_stats(filt):
+    def _get_filtered_stats(filt, rank_stats):
         tau = get_tau(filt[x_key], filt[zc], round_places=round_tau)
         corr = get_corr(filt[x_key], filt[zc], round_places=round_tau)
-        return tau, corr
+
+        ranks_adjusted = len(df) - rank_stats['rank'] + 1
+        ndcg = get_ndcg(ranks_adjusted, filt[zc], round_places=round_tau)
+        ndcg_10 = get_ndcg(ranks_adjusted, filt[zc], round_places=round_tau, top_k=10)
+        ndcg_50 = get_ndcg(ranks_adjusted, filt[zc], round_places=round_tau, top_k=50)
+        return {'tau': tau, 'corr': corr, 'ndcg': ndcg, 'ndcg_10': ndcg_10, 'ndcg_50': ndcg_50}
 
     filtered_df = filter_by_index(df, index=filter_index)
-    tau, corr = _get_filtered_stats(filtered_df)
     stats = get_accuracy_ranks(df, filtered_df.index, x_key=x_key)
 
     res['stats'] = stats
-    res['all'] = {'tau': tau, 'corr': corr, 'index': filtered_df.index}
+
+    metrics = _get_filtered_stats(filtered_df, stats['ranking_filter'])
+    res['all'] = {**metrics, 'index': filtered_df.index}
 
     # top n %
     top_nets = get_above_quantile(df, x_key, acc_quantile=acc_quantile, filter_index=filter_index)
-    tau, corr = _get_filtered_stats(top_nets)
-    res['top_quantile'] = {'tau': tau, 'corr': corr, 'quantile': acc_quantile, 'index': top_nets.index}
+    metrics = _get_filtered_stats(top_nets, stats['ranking_filter'].loc[top_nets.index])
+    res['top_quantile'] = {**metrics, 'quantile': acc_quantile, 'index': top_nets.index}
 
     # top k networks
     top_nets = get_top_k(df, x_key, top_k=top_k, filter_index=filter_index)
@@ -86,7 +98,9 @@ def get_stats_ranks(dfs):
     # also include tau and correlation to the df
     for t, d in dfs.items():
         for key, key_name in [('all', ''), ('top_quantile', 'top_')]:
-            stats[t][f'{key_name}tau'] = d[key]['tau']
-            stats[t][f'{key_name}corr'] = d[key]['corr']
+            for k in d[key].keys():
+                if not isinstance(d[key][k], float):
+                    continue
+                stats[t][f'{key_name}{k}'] = d[key][k]
 
     return pd.DataFrame(stats), ranks
