@@ -2,11 +2,11 @@ import random
 from typing import List
 
 
-def zc_warmup(df, func, n_warmup):
+def zc_warmup(df, scorer, n_warmup):
     assert n_warmup > 0
     zero_cost_pool = [random_net(df) for _ in range(n_warmup)]
-    zero_cost_pool = func(zero_cost_pool)
-    return zero_cost_pool
+    scorer.fit(zero_cost_pool)
+    return scorer.predict(zero_cost_pool)
 
 
 class NetData:
@@ -39,6 +39,10 @@ def get_df_from_data(net_data: List[NetData]):
         indices.append(nd.idx)
 
     return df.loc[indices]
+
+
+def get_data_from_df(index, df):
+    return [NetData(i, df) for i in index]
 
 
 def get_spec_map(df):

@@ -54,7 +54,7 @@ def main(dir_path, rank_zc, benchmark, dataset, filter_zc, naslib_path, quantile
     if filter_zc is None:
         ea_scoring = SingleProxyScore(rank_zc)
     else:
-        ea_scoring = FilterProxyScore(dfs[dataset], filter_zc, rank_zc, quantile=quantile, mode=mode)
+        ea_scoring = FilterProxyScore(filter_zc, rank_zc, quantile=quantile, mode=mode)
 
     all_res = []
     for n_exp in range(n_times):

@@ -3,7 +3,7 @@ from typing import List, Union
 import pandas as pd
 
 from zc_combine.ensemble.filter import filter_by_zc
-from zc_combine.search_utils import NetData, get_df_from_data
+from zc_combine.search_utils import NetData, get_df_from_data, get_data_from_df
 
 
 def score_nets(nets, proxy, filter_index=None, sort=True, pad_val=0.0):
@@ -16,7 +16,7 @@ def score_nets(nets, proxy, filter_index=None, sort=True, pad_val=0.0):
 
     if filter_index is not None:
         idx = nets.index.difference(filter_index)
-        nets_scores[idx] = pad_val
+        nets_scores.loc[idx] = pad_val
 
     return nets_scores.sort_values(ascending=False) if sort else nets_scores
 
@@ -30,7 +30,7 @@ class SingleProxyScore:
         return self
 
     def predict(self, nets: Union[List[NetData], pd.DataFrame]):
-        return score_nets(nets, self.zc, sort=self.sort)
+        return [n[1] for n in score_nets(nets, self.zc, sort=self.sort)]
 
 
 class FilterProxyScore:
@@ -60,8 +60,8 @@ class FilterProxyScore:
         self.fitted_quantiles = [nets[fzc].quantile(q) for q, fzc in zip(self.quantile, self.filter_zc)]
 
     def predict(self, nets: Union[List[NetData], pd.DataFrame]):
-        if isinstance(nets, list):
-            nets = get_df_from_data(nets)
+        net_df = get_df_from_data(nets) if isinstance(nets, list) else nets
 
-        filter_index = filter_by_zc(nets, self.filter_zc, self.fitted_quantiles, mode=self.mode)
-        return score_nets(nets, self.rank_zc, filter_index=filter_index, sort=self.sort, pad_val=self.pad_val)
+        filter_index = filter_by_zc(net_df, self.filter_zc, self.fitted_quantiles, mode=self.mode)
+        res = score_nets(net_df, self.rank_zc, filter_index=filter_index, sort=self.sort, pad_val=self.pad_val)
+        return res if isinstance(nets, pd.DataFrame) else get_data_from_df(res.index, net_df.drop_duplicates())

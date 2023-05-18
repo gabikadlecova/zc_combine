@@ -76,7 +76,7 @@ def run_evolution_search(df, zc_warmup_func=None, zc_mutate_func=None, max_train
 
     for i in range(pool_size):
         if zero_cost_pool is not None:
-            net = zero_cost_pool[i][1]
+            net = zero_cost_pool[i]
         else:
             net = random_net(df)
 
