@@ -1,4 +1,5 @@
 import random
+from typing import List
 
 
 def zc_warmup(df, func, n_warmup):
@@ -11,10 +12,14 @@ def zc_warmup(df, func, n_warmup):
 class NetData:
     def __init__(self, idx, df):
         self.idx = idx
-        self.val = df.loc[idx]
+        self.df = df
 
     def __str__(self):
         return self.val['net']
+
+    @property
+    def val(self):
+        return self.df.loc[self.idx]
 
     def to_spec(self):
         return _get_spec_from_arch_str(self.val['net'])
@@ -24,6 +29,16 @@ class NetData:
 
     def get_val_acc(self):
         return self.val['val_accs']
+
+
+def get_df_from_data(net_data: List[NetData]):
+    df = net_data[0].df
+    indices = []
+    for nd in net_data:
+        assert nd.df is df
+        indices.append(nd.idx)
+
+    return df.loc[indices]
 
 
 def get_spec_map(df):

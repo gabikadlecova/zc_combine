@@ -29,34 +29,33 @@ def above_quantile(df, key, quantile=0.9):
     return df[df[key] > quantile]
 
 
-def filter_by_zc(df, filter_zc, quantile: Union[float, List[float]] = 0.9, mode='u'):
-    if isinstance(filter_zc, str):
-        filter_zc = [filter_zc]
+def filter_by_zc(df, filter_zc: List[str], quantiles: Union[float, List[float]], mode='u'):
+    if not isinstance(quantiles, float):
+        assert len(filter_zc) == len(quantiles)
 
     # return None if some proxy is not computed for this df
     for fz in filter_zc:
         if fz not in df.columns:
             return None
 
+    def above_q(data, i):
+        q = quantiles[i] if isinstance(quantiles, list) else quantiles
+        return data[data[filter_zc[i]] > q].index
+
     # only one filter proxy
     if len(filter_zc) == 1:
-        return above_quantile(df, filter_zc[0], quantile).index
+        return above_q(df, 0)
 
-    # multiple filter proxies
+    # stocking of filter proxies
     if mode == 's' or mode == 'stack':
         top_df = df
         # take top q using the next proxy
-        for i, zc in enumerate(filter_zc):
-            q = quantile[i] if isinstance(quantile, list) else quantile
-            top_df = above_quantile(top_df, zc, q)
+        for i, _ in enumerate(filter_zc):
+            top_df = above_q(top_df, i)
         return top_df.index
 
-    if isinstance(quantile, float):
-        top_nets = [above_quantile(df, zc, quantile).index for zc in filter_zc]
-    else:
-        assert len(quantile) == len(filter_zc)
-        top_nets = [above_quantile(df, zc, q).index for zc, q in zip(filter_zc, quantile)]
-
+    # union or intersection of proxies
+    top_nets = [above_q(df, i) for i, _ in enumerate(filter_zc)]
     if mode == 'u' or mode == 'union':
         index = reduce(lambda ix1, ix2: ix1.union(ix2), top_nets)
     elif mode == 'i' or mode == 'intersection':
@@ -65,17 +64,3 @@ def filter_by_zc(df, filter_zc, quantile: Union[float, List[float]] = 0.9, mode=
         raise ValueError(f"Invalid mode: {mode}, possible u (union), i (intersection), s (stack).")
 
     return index
-
-
-def filter_by_index(df, index=None):
-    return df if index is None else df[df.index.isin(index)]
-
-
-def get_above_quantile(df, key, acc_quantile=0.9, filter_index=None):
-    top_nets = above_quantile(df, key, quantile=acc_quantile)
-    return filter_by_index(top_nets, index=filter_index)
-
-
-def get_top_k(df, key, top_k=3, filter_index=None):
-    best_nets = df.nlargest(top_k, key)
-    return filter_by_index(best_nets, index=filter_index)

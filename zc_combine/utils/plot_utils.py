@@ -202,7 +202,7 @@ def plot_quantile_line(df, key, ax, vmin, vmax, quantile=0.9, horizontal=True, c
 
 
 def _plot_body(fig, title, subplots_adjust=None):
-    #fig.suptitle(title)
+    fig.suptitle(title)
     fig.tight_layout()
     if subplots_adjust is not None:
         plt.subplots_adjust(top=subplots_adjust)

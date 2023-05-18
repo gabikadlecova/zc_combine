@@ -60,6 +60,7 @@ def parse_scores(search_space, include_random=True):
             scores[k]['random'] = _generate_random_score(len(val_accs[k]))
 
         dfs[k] = pd.DataFrame({'net': nets[k], 'val_accs': val_accs[k], **scores[k]})
+        dfs[k]['rank'] = dfs[k]['val_accs'].rank(ascending=False)
 
     return dfs
 

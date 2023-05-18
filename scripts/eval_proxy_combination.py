@@ -4,8 +4,8 @@ import click
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from zc_combine.ensemble.eval import get_stats_zc, get_stats_ranks, eval_combined_proxies
-from zc_combine.ensemble.filter import filter_by_zc
+from zc_combine.ensemble.eval import get_stats_ranks, eval_zerocost_score
+from zc_combine.score import FilterProxyScore
 from zc_combine.utils.plot_utils import plot_networks_by_zc, plot_top_accuracy_zc, plot_filtered_by_zc, \
     plot_filtered_ranks
 from zc_combine.utils.naslib_utils import load_search_space, parse_scores, load_search_spaces_multiple
@@ -26,11 +26,18 @@ def get_dfs(naslib_path, benchmark, dataset, plot_all):
 
 
 def get_df_stats(dfs, filter_zc, rank_zc, quantile, mode):
+    name = f'{filter_zc}-{mode}-{quantile}-{rank_zc}' if filter_zc is not None else rank_zc
+
+    def _score_nets(df):
+        scorer = FilterProxyScore(filter_zc, rank_zc, quantile=quantile, mode=mode)
+        scorer.fit(df)
+        df[name] = scorer.predict(df)
+
     if filter_zc is not None:
-        dfs_filt = {task: filter_by_zc(df, filter_zc, quantile=quantile, mode=mode) for task, df in dfs.items()}
-    else:
-        dfs_filt = {task: None for task in dfs.keys()}
-    return {task: get_stats_zc(df, rank_zc, filter_index=dfs_filt[task]) for task, df in dfs.items() if rank_zc in df.columns}
+        for df in dfs.values():
+            _score_nets(df)
+
+    return {task: eval_zerocost_score(df, name) for task, df in dfs.items() if name in df.columns}
 
 
 def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, dataset):
@@ -60,9 +67,10 @@ def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, data
 @click.option('--filter_zc', default=None)
 @click.option('--naslib_path', default='../../zero_cost/NASLib')
 @click.option('--quantile', default=0.8)
+@click.option('--figsize', default="14,10")
 @click.option('--mode', default='u')
 @click.option('--key', default='corr')
-def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path, quantile, mode, key):
+def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path, quantile, figsize, mode, key):
     assert plot_all or benchmark is not None
     if plot_all:
         assert dataset is not None
@@ -85,8 +93,8 @@ def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path
     dfs = get_dfs(naslib_path, benchmark, dataset, plot_all)
     df_stats = get_df_stats(dfs, filter_zc, rank_zc, quantile, mode)
 
-    figsize = (14, 10) if not plot_all else (17, 7)
-    #figsize = (9, 7)
+    figsize = [int(f) for f in figsize.split(',')]
+
     if filter_zc is None:
         plot_networks_by_zc(df_stats, rank_zc, benchmark, top_line=True, subplots_adjust=0.87, zc_quantile=quantile,
                             key=key, figsize=figsize)

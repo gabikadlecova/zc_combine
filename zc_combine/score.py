@@ -1,41 +1,67 @@
-from typing import List
+from typing import List, Union
+
+import pandas as pd
 
 from zc_combine.ensemble.filter import filter_by_zc
-from zc_combine.search_utils import NetData
+from zc_combine.search_utils import NetData, get_df_from_data
 
 
-def score_nets(nets, proxy, sort=True):
-    nets_scores = [(net.get_proxy_score(proxy), net) for net in nets]
-    if sort:
-        nets_scores = sorted(nets_scores, key=lambda i: i[0], reverse=True)
-    return nets_scores
+def score_nets(nets, proxy, filter_index=None, sort=True, pad_val=0.0):
+    if filter_index is None and not isinstance(nets, pd.DataFrame):
+        nets_scores = [(net.get_proxy_score(proxy), net) for net in nets]
+        return sorted(nets_scores, key=lambda i: i[0], reverse=True) if sort else nets_scores
+
+    nets = get_df_from_data(nets) if not isinstance(nets, pd.DataFrame) else nets
+    nets_scores = nets[proxy].copy()
+
+    if filter_index is not None:
+        idx = nets.index.difference(filter_index)
+        nets_scores[idx] = pad_val
+
+    return nets_scores.sort_values(ascending=False) if sort else nets_scores
 
 
 class SingleProxyScore:
-    def __init__(self, zc, sort=True):
+    def __init__(self, zc, sort=False):
         self.zc = zc
         self.sort = sort
 
-    def __call__(self, nets: List[NetData]):
+    def fit(self, _: Union[List[NetData], pd.DataFrame]):
+        return self
+
+    def predict(self, nets: Union[List[NetData], pd.DataFrame]):
         return score_nets(nets, self.zc, sort=self.sort)
 
 
 class FilterProxyScore:
-    def __init__(self, df, filter_zc, rank_zc, quantile=0.8, mode='u', sort=True):
-        self.df = df
+    def __init__(self, filter_zc: Union[str, List[str]], rank_zc: str, pad_val: float = 0.0,
+                 quantile: Union[float, List[float]] = 0.8, mode='u', sort=False):
 
-        self.filter_zc = filter_zc
+        self.filter_zc = [filter_zc] if isinstance(filter_zc, str) else filter_zc
         self.rank_zc = rank_zc
         self.quantile = quantile
         self.mode = mode
 
+        self.fitted_quantiles = None
+        if not isinstance(quantile, float):
+            assert len(quantile) == len(filter_zc)
+
+        self.pad_val = pad_val
         self.sort = sort
 
-    def __call__(self, nets: List[NetData]):
-        indices = [net.idx for net in nets]
-        nets_df = self.df.loc[indices]
+    def fit(self, nets: Union[List[NetData], pd.DataFrame]):
+        if isinstance(nets, list):
+            nets = get_df_from_data(nets)
 
-        filter_idx = filter_by_zc(nets_df, self.filter_zc, quantile=self.quantile, mode=self.mode)
-        filter_nets = [NetData(fi, self.df) for fi in filter_idx]
+        if isinstance(self.quantile, float):
+            self.fitted_quantiles = [nets[fzc].quantile(self.quantile) for fzc in self.filter_zc]
+            return
 
-        return score_nets(filter_nets, self.rank_zc, sort=self.sort)
+        self.fitted_quantiles = [nets[fzc].quantile(q) for q, fzc in zip(self.quantile, self.filter_zc)]
+
+    def predict(self, nets: Union[List[NetData], pd.DataFrame]):
+        if isinstance(nets, list):
+            nets = get_df_from_data(nets)
+
+        filter_index = filter_by_zc(nets, self.filter_zc, self.fitted_quantiles, mode=self.mode)
+        return score_nets(nets, self.rank_zc, filter_index=filter_index, sort=self.sort, pad_val=self.pad_val)
