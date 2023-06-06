@@ -3,6 +3,7 @@ import click
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from scripts.utils import init_save_dir
 from zc_combine.ensemble.filter import common_n_largest
 from zc_combine.utils.naslib_utils import load_search_space, parse_scores
 from zc_combine.utils.plot_utils import plot_common_networks
@@ -16,13 +17,10 @@ sns.set()
 @click.option('--naslib_path', default='../../zero_cost/NASLib')
 @click.option('--n_largest', default=50)
 def main(dir_path, benchmark, naslib_path, n_largest):
-    if not os.path.exists(dir_path):
-        os.mkdir(dir_path)
+    """Plot for searchspace pairs their common best networks (best ... among `n_largest` networks)."""
 
     save_path = f"common-nets_{benchmark}_{n_largest}"
-    save_path = os.path.join(dir_path, save_path)
-    if not os.path.exists(save_path):
-        os.mkdir(save_path)
+    save_path = init_save_dir(dir_path, save_path)
 
     # process and filter
     search_space = load_search_space(naslib_path, benchmark)

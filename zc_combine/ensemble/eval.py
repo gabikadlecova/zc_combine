@@ -22,6 +22,8 @@ def get_ndcg(accs, scores, round_places=None, top_k=None):
 
 
 def eval_zerocost_score(df, zc, acc_quantile=0.9, x_key='val_accs', top_k=3, round_tau=2, pad_val=0.0):
+    """Evaluate metrics (spearman rho, kendall tau, ndcg) of a zero-cost proxy score column. Compute ranks of
+       chosen/dropped networks. Compute the metrics also for networks over `acc_quantile` (top accuracy networks)."""
     res = {}
 
     def _get_filtered_stats(filt, stats):
@@ -67,7 +69,7 @@ def eval_zerocost_score(df, zc, acc_quantile=0.9, x_key='val_accs', top_k=3, rou
 
 
 def get_accuracy_ranks(df, zc, pad_val=0.0, x_key='val_accs', funcs=None):
-    # split to filtered and left out
+    # split network ranks to filtered and left out
     stats_df = df[[x_key, zc, 'rank']].copy()
     acc_dropped, acc_filtered = stats_df[stats_df[zc] == pad_val], stats_df[stats_df[zc] != pad_val]
     res = {'ranking_full': stats_df, 'ranking_filter': acc_filtered, 'ranking_drop': acc_dropped}
@@ -84,6 +86,7 @@ def get_accuracy_ranks(df, zc, pad_val=0.0, x_key='val_accs', funcs=None):
 
 
 def eval_combined_proxies(df, zc_quantile=0.9, key='tau', pad_val=0.0, **kwargs):
+    """Evaluate different combinations of filter-rank proxies."""
     proxies = [c for c in df.columns if c not in ['net', 'val_accs', 'rank']]
 
     scores = np.zeros((len(proxies), len(proxies)))
@@ -106,10 +109,11 @@ def eval_combined_proxies(df, zc_quantile=0.9, key='tau', pad_val=0.0, **kwargs)
 
 
 def get_stats_ranks(dfs):
+    """Prepare results for saving."""
     ranks = {t: {k: v for k, v in d['stats'].items() if 'ranking' in k} for t, d in dfs.items()}
     stats = {t: {k: v for k, v in d['stats'].items() if k != 'index' and 'ranking' not in k} for t, d in dfs.items()}
 
-    # also include tau and correlation to the df
+    # also include metrics (rho, tau, ndcg) in the df
     for t, d in dfs.items():
         for key, key_name in [('all', ''), ('top_quantile', 'top_')]:
             for k in d[key].keys():

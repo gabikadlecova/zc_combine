@@ -30,6 +30,13 @@ def above_quantile(df, key, quantile=0.9):
 
 
 def filter_by_zc(df, filter_zc: List[str], quantiles: Union[float, List[float]], mode='u'):
+    """Filter out only the best networks using `filter_zc` proxies. For a single proxy, return networks above
+       `quantiles` quantile. For multiple proxies, depending on `mode`:
+           - 'u' ... union of networks above `quantiles`.
+           - 'i' ... intersection of networks above `quantiles`
+           - 's' ... stacking - consecutively filter out top networks using a sequence of proxies
+       """
+
     if not isinstance(quantiles, float):
         assert len(filter_zc) == len(quantiles)
 

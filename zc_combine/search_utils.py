@@ -3,10 +3,13 @@ from typing import List
 
 
 def zc_warmup(df, scorer, n_warmup):
+    """Sample `n_warmup` random nets, score them using `scorer`, and return them sorted by the score (largest first)."""
     assert n_warmup > 0
     zero_cost_pool = [random_net(df) for _ in range(n_warmup)]
+    zero_cost_pool = get_df_from_data(zero_cost_pool)
     scorer.fit(zero_cost_pool)
-    return scorer.predict(zero_cost_pool)
+    res = scorer.predict(zero_cost_pool)
+    return get_data_from_df(res.index, zero_cost_pool.drop_duplicates())
 
 
 class NetData:

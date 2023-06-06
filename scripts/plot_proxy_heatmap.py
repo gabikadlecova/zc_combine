@@ -24,6 +24,7 @@ def plot_heatmap(name, df, key, quantile):
 @click.option('--naslib_path', default='../../zero_cost/NASLib')
 @click.option('--quantile', default=0.8)
 def main(dir_path, benchmark, naslib_path, quantile):
+    """Evaluate all combinations of filter and rank proxies for `quantile`."""
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
 
