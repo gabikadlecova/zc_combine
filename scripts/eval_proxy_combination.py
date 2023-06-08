@@ -28,7 +28,7 @@ def get_dfs(naslib_path, benchmark, dataset, plot_all):
         return dfs if dataset is None else {dataset: dfs[dataset]}
 
 
-def get_df_stats(dfs, filter_zc, rank_zc, quantile, mode):
+def get_df_stats(dfs, filter_zc, rank_zc, quantile, mode, normalize):
     """Scores networks using either a mean of multiple proxies, or using a single proxy. If `filter_zc` is not None,
        score the networks using `filter_zc` and score only the top 1-quantile part."""
 
@@ -36,7 +36,7 @@ def get_df_stats(dfs, filter_zc, rank_zc, quantile, mode):
     name = f'{filter_zc}-{mode}-{quantile}-{rank_zc_str}' if filter_zc is not None else rank_zc_str
 
     def _score_nets(df):
-        scorer = MeanScore(rank_zc) if isinstance(rank_zc, list) and len(rank_zc) >= 2 else SingleProxyScore(rank_zc)
+        scorer = MeanScore(rank_zc, normalize=normalize) if isinstance(rank_zc, list) and len(rank_zc) >= 2 else SingleProxyScore(rank_zc)
         scorer = scorer if filter_zc is None else FilterProxyScore(filter_zc, scorer, quantile=quantile, mode=mode)
         scorer.fit(df)
         df[name] = scorer.predict(df)
@@ -47,7 +47,7 @@ def get_df_stats(dfs, filter_zc, rank_zc, quantile, mode):
     return name, {task: eval_zerocost_score(df, name) for task, df in dfs.items() if name in df.columns}
 
 
-def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, dataset):
+def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, dataset, minmax):
     prefix = benchmark if not plot_all else "all"
     if isinstance(filter_zc, str):
         filter_zc = [filter_zc]
@@ -60,8 +60,10 @@ def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, data
     modestr = "" if filter_zc is None or len(filter_zc) == 1 else mode
     rankstr = '-'.join(rank_zc) if isinstance(rank_zc, list) else rank_zc
     rankstr = f"rank-{rankstr}"
+    minstr = 'minmax' if minmax else 'norm'
+    minstr = '' if not isinstance(rank_zc, list) else minstr
 
-    comps = [prefix, datastr, rankstr, filtstr, quantstr, modestr]
+    comps = [prefix, datastr, rankstr, filtstr, quantstr, modestr, minstr]
     comps = [c for c in comps if len(c)]
     return '_'.join(comps)
 
@@ -78,7 +80,8 @@ def create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, data
 @click.option('--figsize', default="14,10")
 @click.option('--mode', default='u')
 @click.option('--key', default='corr')
-def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path, quantile, figsize, mode, key):
+@click.option('--minmax/--normalize', default=False)
+def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path, quantile, figsize, mode, key, minmax):
     assert plot_all or benchmark is not None
     if plot_all:
         assert dataset is not None
@@ -86,19 +89,19 @@ def main(dir_path, rank_zc, benchmark, dataset, plot_all, filter_zc, naslib_path
     filter_zc, rank_zc, quantile = parse_proxy_settings(filter_zc, rank_zc, quantile)
 
     # create out dir
-    save_path = create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, dataset)
+    save_path = create_dirname(benchmark, plot_all, filter_zc, rank_zc, quantile, mode, dataset, minmax)
     save_path = init_save_dir(dir_path, save_path)
 
     # process and filter
     dfs = get_dfs(naslib_path, benchmark, dataset, plot_all)
-    rank_zc_colname, df_stats = get_df_stats(dfs, filter_zc, rank_zc, quantile, mode)
+    rank_zc_colname, df_stats = get_df_stats(dfs, filter_zc, rank_zc, quantile, mode, not minmax)
 
     figsize = [int(f) for f in figsize.split(',')]
 
     if filter_zc is None:
         # Plot proxy scores of all networks, draw best networks (by accuracy) in orange, top 3 in green
-        plot_networks_by_zc(df_stats, rank_zc_colname, benchmark, top_line=True, subplots_adjust=0.87, zc_quantile=quantile,
-                            key=key, figsize=figsize)
+        plot_networks_by_zc(df_stats, rank_zc_colname, benchmark, top_line=True, subplots_adjust=0.87,
+                            zc_quantile=quantile, key=key, figsize=figsize)
         plt.savefig(os.path.join(save_path, 'full.png'))
 
         # Plot the best networks by accuracy

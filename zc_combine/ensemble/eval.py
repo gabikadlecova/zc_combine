@@ -3,7 +3,7 @@ import pandas as pd
 import scipy.stats
 from sklearn.metrics import ndcg_score
 from zc_combine.ensemble.filter import filter_by_zc, above_quantile
-from zc_combine.score import FilterProxyScore
+from zc_combine.score import FilterProxyScore, SingleProxyScore
 
 
 def get_tau(accs, scores, round_places=None):
@@ -38,6 +38,10 @@ def eval_zerocost_score(df, zc, acc_quantile=0.9, x_key='val_accs', top_k=3, rou
             for k in [None, 10, 50]:
                 scores = filt if not len(name) else corr_filt
                 nk = f"_{k}" if k is not None else ""
+
+                if len(scores) < 2 or len(scores[zc].unique()) < 2:
+                    stat_dict[f'{name}ndcg{nk}'] = 0.0
+                    continue
 
                 rank_stats = stats['ranking_full'] if not len(name) else stats['ranking_filter']
                 ranks_adjusted = len(df) - rank_stats.loc[scores.index]['rank'] + 1
@@ -96,7 +100,7 @@ def eval_combined_proxies(df, zc_quantile=0.9, key='tau', pad_val=0.0, **kwargs)
 
     for filter_zc in proxies:
         for rank_zc in proxies:
-            scorer = FilterProxyScore(filter_zc, rank_zc, quantile=zc_quantile, pad_val=pad_val)
+            scorer = FilterProxyScore(filter_zc, SingleProxyScore(rank_zc), quantile=zc_quantile, pad_val=pad_val)
             scorer.fit(df)
             res_df['score'] = scorer.predict(df)
 
