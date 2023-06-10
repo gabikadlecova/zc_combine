@@ -1,7 +1,9 @@
 import math
+from itertools import chain, combinations
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
 
 def filter_by_range(df, zc, min, max):
@@ -50,6 +52,25 @@ def get_nb301_cell(ops, i=0, both=False):
 def count_ops(ops, val, index=None):
     res = [o.count(val) for o in ops]
     return pd.Series(data=res, index=index) if index is not None else np.array(res)
+
+
+def count_all_ops(df, ops, op_set):
+    op_set = list(op_set)
+    subsets = chain.from_iterable(combinations(op_set, k) for k in range(1, len(op_set) + 1))
+
+    for subset in subsets:
+        count = sum([count_ops(ops, o, index=df.index) for o in subset])
+        df[str(subset)] = count
+
+
+def plot_clouds(df, counts, prox, vmin=0, vmax=7):
+    if isinstance(counts, int):
+        counts = (counts,)
+    if isinstance(counts, tuple):
+        counts = df[str(counts)]
+
+    for c in range(vmin, vmax):
+        sns.scatterplot(data=df[counts == c], x='val_accs', y=prox)
 
 
 def filter_by_ops(ops, op_set, all_present=False):
