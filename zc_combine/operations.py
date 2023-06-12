@@ -44,7 +44,7 @@ def parse_ops_nb101(df, return_edges=True):
 
 def get_nb301_cell(ops, i=0, both=False):
     if both:
-        return [o[0].extend(o[1]) for o in ops]
+        return [(o[0] + o[1]) for o in ops]
 
     return [o[i] for o in ops]
 
