@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+plots_zcs
 *out/
 
 # C extensions
