@@ -24,9 +24,14 @@ def filter_by_range(df, zc, min, max):
     return df[(df[zc] >= min) & (df[zc] <= max)]
 
 
-def parse_ops_nb201(df):
-    ops = df['net'].str.strip('()').str.split(', ').to_list()
-    return [[int(i) for i in op] for op in ops]
+def parse_ops_nb201(df, net_key='net'):
+    is_series = isinstance(df, pd.Series)
+    if is_series:
+        ops = [df[net_key].strip('()').split(', ')]
+    else:
+        ops = df[net_key].str.strip('()').str.split(', ').to_list()
+    res = [[int(i) for i in op] for op in ops]
+    return res[0] if is_series else res
 
 
 def parse_ops_nb301(df):
