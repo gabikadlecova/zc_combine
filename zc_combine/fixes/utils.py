@@ -53,7 +53,7 @@ def zero_ingoing(net, edge_map, zero_op=1):
     return net
 
 
-def nb201_default_isomorphic_cell(data, edge_map, zero_op=1):
+def nb201_zero_out_unreachable(data, edge_map, zero_op=1):
     for idx, net in zip(data.index, data['net']):
         net = [int(i) for i in net.strip('()').split(',')]
         net1 = zero_outgoing(net, edge_map, zero_op=zero_op)
