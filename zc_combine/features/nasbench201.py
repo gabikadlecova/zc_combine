@@ -41,7 +41,7 @@ def max_num_on_path(net, allowed, start=1, end=4):
     _, edges = net
 
     def compute_weight(start, end, _):
-        return 0 if edges[(start, end)] in allowed else 1
+        return -1 if edges[(start, end)] in allowed else 1
 
     G = to_graph(edges.keys())
     try:
