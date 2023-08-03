@@ -16,14 +16,15 @@ def count_ops(net, to_names=False):
     return _to_names(op_counts, ops) if to_names else op_counts
 
 
-def get_in_out_edges(edges, allowed, start=1, end=4):
+def get_in_out_edges(edges, allowed):
     G = to_graph(edges.keys())
-    in_edges = {k: [e for e in G.edges if e[0] == k and edges[e] in allowed] for k in range(start, end + 1)}
-    out_edges = {k: [e for e in G.edges if e[1] == k and edges[e] in allowed] for k in range(start, end + 1)}
+
+    in_edges = {k: [e for e in G.edges if e[0] == k and edges[e] in allowed] for k in G.nodes}
+    out_edges = {k: [e for e in G.edges if e[1] == k and edges[e] in allowed] for k in G.nodes}
     return in_edges, out_edges
 
 
-def min_path_len(net, banned, start=1, end=4):
+def min_path_len(net, banned, start=1, end=4, max_val=None):
     _, edges = net
     active_edges = {e for e, v in edges.items() if v not in banned}
 
@@ -31,7 +32,7 @@ def min_path_len(net, banned, start=1, end=4):
     try:
         return nx.shortest_path_length(G, source=start, target=end)
     except (nx.NodeNotFound, nx.NetworkXNoPath):
-        return 5
+        return end + 1 if max_val is None else max_val
 
 
 def max_num_on_path(net, allowed, start=1, end=4):
@@ -42,7 +43,7 @@ def max_num_on_path(net, allowed, start=1, end=4):
 
     G = to_graph(edges.keys())
     try:
-        path = nx.shortest_path(G, source=start, target=end, weight=compute_weight)
+        path = nx.shortest_path(G, source=start, target=end, weight=compute_weight, method='bellman-ford')
     except (nx.NodeNotFound, nx.NetworkXNoPath):
         return 0
 
