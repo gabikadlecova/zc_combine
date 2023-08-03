@@ -6,6 +6,11 @@ import pandas as pd
 import seaborn as sns
 
 
+def get_ops_nb301():
+    return ["max_pool_3x3", "avg_pool_3x3", "skip_connect", "sep_conv_3x3", "sep_conv_5x5", "dil_conv_3x3",
+            "dil_conv_5x5"]
+
+
 def get_ops_edges_nb201():
     edge_map = ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4))
     edge_map = {val: i for i, val in enumerate(edge_map)}

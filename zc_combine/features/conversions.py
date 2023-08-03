@@ -1,7 +1,7 @@
 import networkx as nx
 
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
-from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101
+from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301
 
 
 def to_graph(edges):
@@ -42,3 +42,31 @@ def tnb101_to_graph(net_str, net_key='net'):
     net = parse_ops_nb201(net_str, net_key=net_key)
     ops, edges = get_ops_edges_tnb101()
     return _nb201_like_to_graph(net, ops, edges)
+
+
+def darts_to_graph(genotype):
+    """Adapted from darts plotting script."""
+    op_map = ['out', *get_ops_nb301()]
+    op_map = {o: i for i, o in enumerate(op_map)}
+    ops = {i: o for o, i in op_map.items()}
+    edges = {}
+
+    assert len(genotype) % 2 == 0
+    steps = len(genotype) // 2
+
+    for i in range(steps):
+        for k in [2 * i, 2 * i + 1]:
+            op, j = genotype[k]
+            if j == 0:
+                u = "c_{k-2}"
+            elif j == 1:
+                u = "c_{k-1}"
+            else:
+                u = str(j - 2)
+            v = str(i)
+            edges[u, v] = op_map[op]
+
+    for i in range(steps):
+        edges[str(i), "c_{k}"] = op_map['out']
+
+    return ops, edges
