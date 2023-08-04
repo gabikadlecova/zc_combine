@@ -15,7 +15,7 @@ def op_on_pos(net):
 
 def node_degree(net, allowed, start=1, end=4):
     _, edges = net
-    in_edges, out_edges = get_in_out_edges(edges, allowed, start=start, end=end)
+    in_edges, out_edges = get_in_out_edges(edges, allowed)
 
     get_avg = lambda x: np.mean([len(v) for v in x.values()])
 
