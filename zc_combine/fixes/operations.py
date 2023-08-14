@@ -6,6 +6,10 @@ import pandas as pd
 import seaborn as sns
 
 
+def get_ops_nb101():
+    return ['input', 'output', 'maxpool3x3', 'conv1x1-bn-relu', 'conv3x3-bn-relu']
+
+
 def get_ops_nb301():
     return ["max_pool_3x3", "avg_pool_3x3", "skip_connect", "sep_conv_3x3", "sep_conv_5x5", "dil_conv_3x3",
             "dil_conv_5x5"]
@@ -29,14 +33,17 @@ def filter_by_range(df, zc, min, max):
     return df[(df[zc] >= min) & (df[zc] <= max)]
 
 
+def _parse_str(df, net_key='net'):
+    if isinstance(df, pd.Series):
+        return [df[net_key].strip('()').split(', ')]
+
+    return df[net_key].str.strip('()').str.split(', ').to_list()
+
+
 def parse_ops_nb201(df, net_key='net'):
-    is_series = isinstance(df, pd.Series)
-    if is_series:
-        ops = [df[net_key].strip('()').split(', ')]
-    else:
-        ops = df[net_key].str.strip('()').str.split(', ').to_list()
+    ops = _parse_str(df, net_key=net_key)
     res = [[int(i) for i in op] for op in ops]
-    return res[0] if is_series else res
+    return res[0] if isinstance(df, pd.Series) else res
 
 
 def parse_ops_nb301(df):
@@ -49,8 +56,8 @@ def parse_ops_nb301(df):
     return [(parse_cell(op[0]), parse_cell(op[1])) for op in ops_tuples]
 
 
-def parse_ops_nb101(df, return_edges=True):
-    ops = df['net'].str.strip('()').str.split(', ').to_list()
+def parse_ops_nb101(df, net_key='net', return_edges=True):
+    ops = _parse_str(df, net_key=net_key)
 
     def parse_cell(c):
         n_nodes = int(math.sqrt(len(c)))
@@ -61,6 +68,9 @@ def parse_ops_nb101(df, return_edges=True):
         return (op, [int(e) for e in edges]) if return_edges else op
 
     vals = [parse_cell(op) for op in ops]
+    if len(vals) == 1:
+        return vals[0]
+
     if not return_edges:
         return vals
     return [o[0] for o in vals], [o[1] for o in vals]

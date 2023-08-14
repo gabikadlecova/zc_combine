@@ -1,7 +1,9 @@
 import networkx as nx
+import numpy as np
 
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
-from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301
+from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301, \
+    get_ops_nb101, parse_ops_nb101
 
 
 def to_graph(edges):
@@ -24,6 +26,19 @@ def keep_only_isomorpic_nb201(data, meta, zero_is_1=True):
         unique_nets = {''.join([remap_values(c, '0', '1') for c in n]) for n in unique_nets}
 
     return data[data['net'].isin(unique_nets)].copy()
+
+
+def nb101_to_graph(net):
+    op_map = [*get_ops_nb101()]
+    op_map = {o: i for i, o in enumerate(op_map)}
+    op_map = {i: o for o, i in op_map.items()}
+
+    ops, edges = parse_ops_nb101(net)
+    edges = np.array(edges)
+    edges = edges.reshape(int(np.sqrt(edges.shape[0])), -1)
+    assert edges.shape[0] == edges.shape[1]
+
+    return op_map, ops, nx.from_numpy_array(edges)
 
 
 def _nb201_like_to_graph(net, ops, edge_map):
