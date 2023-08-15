@@ -38,7 +38,7 @@ def nb101_to_graph(net):
     edges = edges.reshape(int(np.sqrt(edges.shape[0])), -1)
     assert edges.shape[0] == edges.shape[1]
 
-    return op_map, ops, nx.from_numpy_array(edges)
+    return op_map, ops, nx.from_numpy_array(edges, create_using=nx.DiGraph)
 
 
 def _nb201_like_to_graph(net, ops, edge_map):

@@ -27,14 +27,14 @@ def count_ops(net, to_names=False):
 
 def get_in_out_edges_opnodes(net, allowed):
     _, ops, graph = net
-    in_edges = {}
-    out_edges = {}
+    in_edges = {i: [] for i, _ in enumerate(ops)}
+    out_edges = {i: [] for i, _ in enumerate(ops)}
 
     for e in graph.edges:
         if ops[e[0]] in allowed:
-            in_edges.setdefault(e[1], []).append(e[0])
+            in_edges[e[1]].append(e[0])
         if ops[e[1]] in allowed:
-            out_edges.setdefault(e[0], []).append(e[1])
+            out_edges[e[0]].append(e[1])
 
     return in_edges, out_edges
 
