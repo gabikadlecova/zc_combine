@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 
+from naslib.search_spaces.nasbench301.conversions import convert_compact_to_genotype
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
 from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301, \
     get_ops_nb101, parse_ops_nb101
@@ -85,3 +86,16 @@ def darts_to_graph(genotype):
         edges[str(i), "c_{k}"] = op_map['out']
 
     return ops, edges
+
+
+def nb301_to_graph(n):
+    genotype = convert_compact_to_genotype(eval(n))
+    return darts_to_graph(genotype.normal), darts_to_graph(genotype.reduce)
+
+
+bench_conversions = {
+    'zc_nasbench101': nb201_to_graph,
+    'zc_nasbench201': nb101_to_graph,
+    'zc_nasbench301': nb301_to_graph,
+    'zc_transbench101_micro': tnb101_to_graph
+}
