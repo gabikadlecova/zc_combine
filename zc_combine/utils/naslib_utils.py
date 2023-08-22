@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 
 
-def list_search_spaces(naslib_path):
-    return glob.glob(f'{naslib_path}/naslib/data/*.json')
+def list_search_spaces(spaces_path):
+    return glob.glob(f'{spaces_path}/*.json')
 
 
-def load_search_space(naslib_path, name):
-    with open(f'{naslib_path}/naslib/data/{name}.json', 'r') as f:
+def load_search_space(spaces_path, name):
+    with open(f'{spaces_path}/{name}.json', 'r') as f:
         return json.load(f)
 
 

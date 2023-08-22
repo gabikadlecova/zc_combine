@@ -35,7 +35,10 @@ def filter_by_range(df, zc, min, max):
 
 def _parse_str(df, net_key='net'):
     if isinstance(df, pd.Series):
-        return [df[net_key].strip('()').split(', ')]
+        df = df[net_key]
+
+    if isinstance(df, str):
+        return [df.strip('()').split(', ')]
 
     return df[net_key].str.strip('()').str.split(', ').to_list()
 
