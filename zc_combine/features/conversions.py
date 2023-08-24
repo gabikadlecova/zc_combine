@@ -29,12 +29,12 @@ def keep_only_isomorpic_nb201(data, meta, zero_is_1=True, net_key='net'):
     return data[data[net_key].isin(unique_nets)].copy()
 
 
-def nb101_to_graph(net):
+def nb101_to_graph(net, net_key='net'):
     op_map = [*get_ops_nb101()]
     op_map = {o: i for i, o in enumerate(op_map)}
     op_map = {i: o for o, i in op_map.items()}
 
-    ops, edges = parse_ops_nb101(net)
+    ops, edges = parse_ops_nb101(net,net_key=net_key)
     edges = np.array(edges)
     edges = edges.reshape(int(np.sqrt(edges.shape[0])), -1)
     assert edges.shape[0] == edges.shape[1]
@@ -88,14 +88,17 @@ def darts_to_graph(genotype):
     return ops, edges
 
 
-def nb301_to_graph(n):
+def nb301_to_graph(n, net_key="net"):
+    if not isinstance(n, str):
+        n = n[net_key]
+
     genotype = convert_compact_to_genotype(eval(n))
     return darts_to_graph(genotype.normal), darts_to_graph(genotype.reduce)
 
 
 bench_conversions = {
-    'zc_nasbench101': nb201_to_graph,
-    'zc_nasbench201': nb101_to_graph,
+    'zc_nasbench101': nb101_to_graph,
+    'zc_nasbench201': nb201_to_graph,
     'zc_nasbench301': nb301_to_graph,
     'zc_transbench101_micro': tnb101_to_graph
 }

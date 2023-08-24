@@ -3,9 +3,6 @@
     "name": "op_count"
   },
   {
-    "name": "op_on_position"
-  },
-  {
     "name": "min_path_len",
     "kwargs": {"banned": [[1], [0, 1], [0, 1, 4], [1, 4]]}
   },

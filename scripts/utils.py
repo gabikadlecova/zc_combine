@@ -1,5 +1,6 @@
 import json
 
+import numpy as np
 import pandas as pd
 from scipy.stats import kendalltau, spearmanr
 from sklearn.model_selection import train_test_split
@@ -23,12 +24,6 @@ bench_names = {
 
 def get_bench_key(benchmark):
     return bench_names[benchmark] if benchmark in bench_names else benchmark
-
-
-def load_uniques(meta_path):
-    with open(meta_path, 'r') as f:
-        meta = json.load(f)
-    return [v['nb201-string'] for k, v in meta['ids'].items() if k == v['isomorph']]
 
 
 def keep_unique_nets(data, tnb=False, filter_nets=None):
@@ -57,7 +52,7 @@ def get_net_data(data, benchmark, net_str='net'):
     benchmark = get_bench_key(benchmark)
     convert_func = bench_conversions[benchmark]
 
-    return {i: convert_func(data.loc[i], net_str) for i in data.index}
+    return {i: convert_func(data.loc[i], net_key=net_str) for i in data.index}
 
 
 def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True,
@@ -81,6 +76,7 @@ def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None,
     y = res_data['val_accs']
     res_data.drop(columns=['val_accs'], inplace=True)
 
+    res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
     return res_data, y
 
 
@@ -89,20 +85,59 @@ def get_data_splits(data, y, **kwargs):
     return {"train_X": tr_X, "test_X": te_X, "train_y": tr_y, "test_y": te_y}
 
 
-def eval_model(model_cls, data, n_times=1, random_state=43):
-    res = {'r2': [], 'mse': [], 'tau': [], 'corr': []}
+def _dict_to_lists(mdict, res_dict, prefix='', mean_m=False):
+    for k, m in mdict.items():
+        mlist = res_dict.setdefault(f"{k}{prefix}", [])
+
+        if mean_m:
+            if not isinstance(m, float):
+                m = m[0] if len(m) == 1 else np.mean(m)
+        mlist.append(m)
+
+
+def eval_model(model_cls, data, n_times=1, random_state=43, subsample=True, sample_size=200, sample_times=10):
+    res = {'seed': []}
     models = []
 
     for i in range(n_times):
+        res['seed'].append(random_state + i)
         model = model_cls(random_state + i)
         model.fit(data['train_X'], data['train_y'])
 
-        preds = model.predict(data['test_X'])
-        true = data['test_y']
-        res['r2'].append(r2_score(true, preds))
-        res['mse'].append(mean_squared_error(true, preds))
-        res['tau'].append(kendalltau(preds, true)[0])
-        res['corr'].append(spearmanr(preds, true)[0])
+        def save_preds(sample=False):
+            res_metrics = {}
+            repeats = sample_times if sample else 1
+
+            # sample n times
+            for j in range(repeats):
+                metrics = predict_on_test(model, data['test_X'], data['test_y'], sample=sample_size if sample else None,
+                                          seed=random_state + j)
+                _dict_to_lists(metrics, res_metrics)
+
+            # save mean of sampled
+            _dict_to_lists(res_metrics, res, prefix='_sample' if sample else '', mean_m=True)
+
+        save_preds()
+        if subsample:
+            save_preds(True)
         models.append(model)
 
     return models, res
+
+
+def predict_on_test(model, test_X, test_y, sample=None, seed=None):
+    res = {}
+
+    if sample is not None:
+        state = np.random.RandomState(seed) if seed is not None else np.random
+        idxs = state.randint(0, len(test_y), sample)
+        test_X, test_y = test_X.iloc[idxs], test_y.iloc[idxs]
+
+    preds = model.predict(test_X)
+    true = test_y
+
+    res['r2'] = r2_score(true, preds)
+    res['mse'] = mean_squared_error(true, preds)
+    res['tau'] = kendalltau(preds, true)[0]
+    res['corr'] = spearmanr(preds, true)[0]
+    return res
