@@ -1,16 +1,46 @@
 import os.path
-
 import click
 import json
-
+import numpy as np
 import pandas as pd
+import time
 
+from datetime import datetime
 from utils import load_bench_data, get_net_data, get_dataset, get_data_splits, eval_model
 from zc_combine.predictors import predictor_cls
 
 
+def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df):
+    if not os.path.exists(out):
+        os.mkdir(out)
+
+    out_name = '_'.join(f"{k}-{v}" for k, v in config_args.items())
+    out_name = os.path.join(out, f"{out_prefix}{out_name}{timestamp}")
+    os.mkdir(out_name)
+
+    res_df.to_csv(os.path.join(out_name, 'res.csv'), index=False)
+    imp_df.to_csv(os.path.join(out_name, 'imp.csv'), index=False)
+
+
+def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df):
+    import wandb
+    wandb.login(key=key)
+    wandb.init(project=project_name, config=config_args, name=timestamp)
+
+    wandb.log({'results': wandb.Table(dataframe=res_df)})
+    wandb.log({'feature_importances': wandb.Table(dataframe=imp_df)})
+
+    def log_stats(df, pref=''):
+        wandb.log({f"{pref}{k}_mean": np.mean(df[k]) for k in df.columns})
+        wandb.log({f"{pref}{k}_std": np.std(df[k]) for k in df.columns})
+
+    log_stats(res_df)
+    log_stats(imp_df, pref='featimp_')
+
+
 @click.command()
-@click.option('--out', required=True)
+@click.option('--out', default='.', help='Root output directory.')
+@click.option('--out_prefix', default='', help='Subdirectory prefix, the rest of the name has arg values.')
 @click.option('--benchmark', required=True, help="Possible values: nb101, nb201, tnb101, nb301.")
 @click.option('--searchspace_path', default='../data')
 @click.option('--dataset', default='cifar10')
@@ -31,8 +61,22 @@ from zc_combine.predictors import predictor_cls
 @click.option('--data_seed', default=42, help="Data split seed.")
 @click.option('--train_size', default=100, help="Number of train architectures sampled.")
 @click.option('--model', default='rf', help="Model to use (rf, xgb, xgb_tuned).")
-def main(out, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, use_all_proxies, use_features,
-         use_flops_params, n_evals, seed, data_seed, train_size, model):
+@click.option('--wandb_key', default=None, help="If provided, data is logged to wandb instead.")
+@click.option('--wandb_project', default='simple_features', help='Wandb project name (used only if '
+                                                                 '--wandb_key is provided).')
+def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, use_all_proxies,
+         use_features, use_flops_params, n_evals, seed, data_seed, train_size, model, wandb_key, wandb_project):
+
+    # construct args for directory/wandb names
+    cfg_args = {'benchmark': benchmark, 'dataset': dataset, 'n_evals': n_evals, 'seed': seed, 'data_seed': data_seed,
+                'train_size': train_size, 'model': model, 'use_all_proxies': use_all_proxies,
+                'use_features': use_features, 'proxy': None, 'features': None, 'use_flops_params': use_all_proxies}
+    if not use_all_proxies:
+        cfg_args['proxy'] = '-'.join(proxy.split(',')) if proxy is not None else None
+        cfg_args['use_flops_params'] = use_flops_params
+    if use_features:
+        cfg_args['features'] = '-'.join(features.split(',')) if features is not None else None
+
 
     # load meta.json to filter unique nets from nb201 and tnb101
     if meta is not None:
@@ -67,6 +111,7 @@ def main(out, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, 
     # fit model n times with different seeds
     model_cls = predictor_cls[model]
     fitted_models, res = eval_model(model_cls, data_splits, n_times=n_evals, random_state=seed)
+    result_df = pd.DataFrame(res)
 
     importances_df = []
     for model, s in zip(fitted_models, res['seed']):
@@ -74,16 +119,11 @@ def main(out, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, 
         importances_df.append({'seed': s, **imps})
     importances_df = pd.DataFrame(importances_df)
 
-    # TODO wandb
-    # TODO better output path
-    result_df = pd.DataFrame(res)
-    if not os.path.exists(out):
-        os.mkdir(out)
-
-    result_df.to_csv(os.path.join(out, 'res.csv'))
-    importances_df.to_csv(os.path.join(out, 'imp.csv'))
-    print(res)
-    # TODO PCA
+    timestamp = datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S")
+    if wandb_key is not None:
+        log_to_wandb(wandb_key, wandb_project, timestamp, cfg_args, result_df, importances_df)
+    else:
+        log_to_csv(out, out_prefix, timestamp, cfg_args, result_df, importances_df)
 
 
 if __name__ == "__main__":
