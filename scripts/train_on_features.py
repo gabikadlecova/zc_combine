@@ -9,7 +9,7 @@ from datetime import datetime
 
 from sklearn.decomposition import PCA
 
-from utils import load_bench_data, get_net_data, get_dataset, get_data_splits, eval_model
+from utils import load_bench_data, get_net_data, get_dataset, get_data_splits, eval_model, parse_columns_filename
 from zc_combine.predictors import predictor_cls
 
 
@@ -26,9 +26,13 @@ def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df, pca_df, 
     if not os.path.exists(out):
         os.mkdir(out)
 
-    out_name = '_'.join(f"{k}-{v}" for k, v in config_args.items())
-    out_name = os.path.join(out, f"{out_prefix}{out_name}{timestamp}")
+    name_args = {k: config_args[k] for k in ['benchmark', 'dataset', 'train_size', 'model', 'use_all_proxies']}
+    out_name = '_'.join(f"{k}-{v}" for k, v in name_args.items())
+    out_name = os.path.join(out, f"{out_prefix}{out_name}-{timestamp}")
     os.mkdir(out_name)
+
+    with open(os.path.join(out_name, 'args.json'), 'r') as f:
+        json.dump(config_args, f)
 
     def log_csv(df, name):
         df.to_csv(os.path.join(out_name, f'{name}.csv'), index=False)
@@ -93,18 +97,17 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df, pca_
 def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, columns_json,
          use_all_proxies, use_features, use_flops_params, only_pca, n_components, n_evals, seed, data_seed, train_size,
          model, wandb_key, wandb_project):
-
-    # TODO look what was used
-
     # construct args for directory/wandb names
     cfg_args = {'benchmark': benchmark, 'dataset': dataset, 'n_evals': n_evals, 'seed': seed, 'data_seed': data_seed,
                 'train_size': train_size, 'model': model, 'use_all_proxies': use_all_proxies,
-                'use_features': use_features, 'proxy': None, 'features': None, 'use_flops_params': use_all_proxies}
+                'use_features': use_features, 'proxy': None, 'features': None}
     if not use_all_proxies:
         cfg_args['proxy'] = '-'.join(proxy.split(',')) if proxy is not None else None
         cfg_args['use_flops_params'] = use_flops_params
     if use_features:
         cfg_args['features'] = '-'.join(features.split(',')) if features is not None else None
+    if columns_json is not None:
+        cfg_args.update(parse_columns_filename(columns_json))
 
     # load meta.json to filter unique nets from nb201 and tnb101
     if meta is not None:
@@ -137,6 +140,7 @@ def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, featu
     if columns_json is not None:
         with open(columns_json, 'r') as f:
             cols = json.load(f)
+            cols = set(cols)
         dataset = dataset[cols]
 
     # train test split, access splits - res['train_X'], res['test_y'],...

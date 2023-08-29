@@ -1,4 +1,5 @@
 import json
+import os.path
 
 import numpy as np
 import pandas as pd
@@ -141,3 +142,17 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
     res['tau'] = kendalltau(preds, true)[0]
     res['corr'] = spearmanr(preds, true)[0]
     return res
+
+
+def parse_columns_filename(path):
+    path, _ = os.path.splitext(os.path.basename(path))
+
+    args = path.split('-')
+    mode_idx = 'idx' in path
+    has_prefix = 5 if mode_idx else 4
+    has_prefix = len(args) == has_prefix
+
+    names = ['prefix'] if has_prefix else []
+    names = ['name', *names, 'n_features', 'mode']
+    names = [*names, 'idx'] if mode_idx else names
+    return {f"cols_{n}": v for n, v in zip(names, args)}
