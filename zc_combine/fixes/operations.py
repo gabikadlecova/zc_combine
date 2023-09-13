@@ -46,7 +46,7 @@ def _parse_str(df, net_key='net'):
 def parse_ops_nb201(df, net_key='net'):
     ops = _parse_str(df, net_key=net_key)
     res = [[int(i) for i in op] for op in ops]
-    return res[0] if isinstance(df, pd.Series) else res
+    return res[0] if isinstance(df, pd.Series) or isinstance(df, str) else res
 
 
 def parse_ops_nb301(df):

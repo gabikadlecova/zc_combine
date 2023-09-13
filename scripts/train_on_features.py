@@ -26,12 +26,13 @@ def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df, pca_df, 
     if not os.path.exists(out):
         os.mkdir(out)
 
-    name_args = {k: config_args[k] for k in ['benchmark', 'dataset', 'train_size', 'model', 'use_all_proxies']}
+    name_args = {k: config_args[k] for k in ['benchmark', 'dataset', 'train_size', 'use_all_proxies']}
+    name_args['model'] = config_args['model'] if 'model' in config_args else 'pca'
     out_name = '_'.join(f"{k}-{v}" for k, v in name_args.items())
     out_name = os.path.join(out, f"{out_prefix}{out_name}-{timestamp}")
     os.mkdir(out_name)
 
-    with open(os.path.join(out_name, 'args.json'), 'r') as f:
+    with open(os.path.join(out_name, 'args.json'), 'w') as f:
         json.dump(config_args, f)
 
     def log_csv(df, name):
@@ -99,8 +100,10 @@ def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, featu
          model, wandb_key, wandb_project):
     # construct args for directory/wandb names
     cfg_args = {'benchmark': benchmark, 'dataset': dataset, 'n_evals': n_evals, 'seed': seed, 'data_seed': data_seed,
-                'train_size': train_size, 'model': model, 'use_all_proxies': use_all_proxies,
+                'train_size': train_size, 'use_all_proxies': use_all_proxies,
                 'use_features': use_features, 'proxy': None, 'features': None}
+    if not only_pca:
+        cfg_args['model'] = model
     if not use_all_proxies:
         cfg_args['proxy'] = '-'.join(proxy.split(',')) if proxy is not None else None
         cfg_args['use_flops_params'] = use_flops_params
