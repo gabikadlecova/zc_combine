@@ -84,6 +84,8 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df, pca_
               help='If True, use simple features in the dataset.')
 @click.option('--use_flops_params/--no_flops_params', default=True,
               help='If True, add flops and params to dataset regardless of what other proxies are chosen.')
+@click.option('--filter_zero_op/--no_zero_op', default=False, help="If True, additionally filter out nb201"
+                                                                   " nets with zero-ops isomorphic to other nets.")
 @click.option('--only_pca/--pca_and_model', default=False, help="If True, fit PCA only and not the model.")
 @click.option('--n_components', default=2, help="Number of PCA components.")
 @click.option('--n_evals', default=10, help="Number of models fitted and evaluated on the data (with random"
@@ -96,8 +98,8 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df, pca_
 @click.option('--wandb_project', default='simple_features', help='Wandb project name (used only if '
                                                                  '--wandb_key is provided).')
 def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, columns_json,
-         use_all_proxies, use_features, use_flops_params, only_pca, n_components, n_evals, seed, data_seed, train_size,
-         model, wandb_key, wandb_project):
+         use_all_proxies, use_features, use_flops_params, filter_zero_op, only_pca, n_components, n_evals, seed,
+         data_seed, train_size, model, wandb_key, wandb_project):
     # construct args for directory/wandb names
     cfg_args = {'benchmark': benchmark, 'dataset': dataset, 'n_evals': n_evals, 'seed': seed, 'data_seed': data_seed,
                 'train_size': train_size, 'use_all_proxies': use_all_proxies,
@@ -117,7 +119,7 @@ def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, featu
         with open(meta, 'r') as f:
             meta = json.load(f)
 
-    data = load_bench_data(searchspace_path, benchmark, dataset, filter_nets=meta)
+    data = load_bench_data(searchspace_path, benchmark, dataset, filter_nets=meta, zero_op_filtering=filter_zero_op)
     nets = get_net_data(data, benchmark)
 
     # To convert data['net'] to str: (4, 0, 3, 1, 4, 3)

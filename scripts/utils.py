@@ -36,14 +36,14 @@ def keep_unique_nets(data, tnb=False, filter_nets=None):
     return data[data['net'] == data['new_net']]
 
 
-def load_bench_data(searchspace_path, benchmark, dataset, filter_nets=None):
+def load_bench_data(searchspace_path, benchmark, dataset, filter_nets=None, zero_op_filtering=False):
     benchmark = get_bench_key(benchmark)
     search_space = load_search_space(searchspace_path, benchmark)
     dfs = parse_scores(search_space)
     data = dfs[dataset]
 
     tnb = 'trans' in benchmark
-    if tnb or '201' in benchmark:
+    if tnb or '201' in benchmark and zero_op_filtering:
         data = keep_unique_nets(data, tnb=tnb, filter_nets=filter_nets)
 
     return data
