@@ -5,24 +5,65 @@ import numpy as np
 import pandas as pd
 import time
 
+import scipy.stats
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 from datetime import datetime
 
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 from utils import load_bench_data, get_net_data, get_dataset, get_data_splits, eval_model, parse_columns_filename
 from zc_combine.predictors import predictor_cls
 
 
-def do_pca(fit_data, transform_data, n_components):
+def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings=True, standardize=True):
     pca = PCA(n_components=n_components)
-    pca.fit(fit_data)
-    pca_data = pca.transform(transform_data)
 
-    pca_importances = pd.DataFrame(data=pca.components_, columns=fit_data.columns)
-    return pca_data, pca_importances
+    if standardize:
+        scaler = StandardScaler()
+        pca.fit(scaler.fit_transform(fit_data))
+        pca_data = pca.transform(scaler.transform(transform_data))
+    else:
+        pca.fit(fit_data)
+        pca_data = pca.transform(transform_data)
+
+    plot_dd = pd.DataFrame(pca_data)
+    plot_dd['val_accs'] = pd.qcut(transform_y, 4)
+    indices = {v: i for i, v in enumerate(sorted(plot_dd['val_accs'].unique()))}
+    plot_dd['val_accs_idx'] = plot_dd['val_accs'].map(indices).astype(int)
+
+    importances = (pca.components_.T * np.sqrt(pca.explained_variance_)).T if compute_loadings else pca.components_
+    pca_importances = pd.DataFrame(data=importances, columns=fit_data.columns)
+    return plot_dd, pca_importances
 
 
-def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df, pca_df, pca_train_df):
+def _plot_pca(pca_data, title, save):
+    pca_features, pca_loadings = pca_data
+
+    sns.set()
+
+    plt.figure(figsize=(10, 8))
+    ax = sns.scatterplot(data=pca_features, x=0, y=1, hue='val_accs_idx', size='val_accs_idx', legend='full')
+    legend = ax.get_legend()
+    legend.set_title('quantile')
+    idxs = list(sorted(pca_features['val_accs'].unique()))
+    for t in legend.texts:
+        t.set_text(idxs[int(t._text)])
+
+    def adjust_outliers(col, func, dif=0.05):
+        scores = scipy.stats.zscore(col)
+        col = [c for c, s in zip(col, scores) if abs(s) < 4]
+        func(min(col) - dif, max(col) + dif)
+
+    adjust_outliers(pca_features[0], plt.xlim)
+    adjust_outliers(pca_features[1], plt.ylim)
+    plt.title(title)
+    plt.savefig(save)
+
+
+def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df, pca_data, pca_train_data):
     if not os.path.exists(out):
         os.mkdir(out)
 
@@ -43,17 +84,20 @@ def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df, pca_df, 
     if imp_df is not None:
         log_csv(imp_df, 'imp')
 
+    _, pca_df = pca_data
+    _, pca_train_df = pca_train_data
+    
+    _plot_pca(pca_data, 'Full fit', os.path.join(out_name, 'full_pca.png'))
+    _plot_pca(pca_train_data, 'Train data fit', os.path.join(out_name, 'train_pca.png'))
+
     log_csv(pca_df, 'pca')
     log_csv(pca_train_df, 'pca_train_fit')
 
 
-def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df, pca_df, pca_train_df):
+def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df):
     import wandb
     wandb.login(key=key)
     wandb.init(project=project_name, config=config_args, name=timestamp)
-
-    wandb.log({'pca': wandb.Table(dataframe=pca_df)})
-    wandb.log({'pca_train_fit': wandb.Table(dataframe=pca_train_df)})
 
     def log_stats(df, name, pref=''):
         if df is None:
@@ -87,6 +131,8 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df, pca_
 @click.option('--filter_zero_op/--no_zero_op', default=False, help="If True, additionally filter out nb201"
                                                                    " nets with zero-ops isomorphic to other nets.")
 @click.option('--only_pca/--pca_and_model', default=False, help="If True, fit PCA only and not the model.")
+@click.option('--pca_loadings/--pca_components', default=True, help="If True, save loadings and not eigenvalues.")
+@click.option('--standardize/--no_standardize', default=False, help="If True, apply StandardScaler before PCA.")
 @click.option('--n_components', default=2, help="Number of PCA components.")
 @click.option('--n_evals', default=10, help="Number of models fitted and evaluated on the data (with random"
                                             " state seed + i).")
@@ -98,19 +144,22 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df, pca_
 @click.option('--wandb_project', default='simple_features', help='Wandb project name (used only if '
                                                                  '--wandb_key is provided).')
 def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, features, proxy, columns_json,
-         use_all_proxies, use_features, use_flops_params, filter_zero_op, only_pca, n_components, n_evals, seed,
-         data_seed, train_size, model, wandb_key, wandb_project):
+         use_all_proxies, use_features, use_flops_params, filter_zero_op, only_pca, pca_loadings, standardize,
+         n_components, n_evals, seed, data_seed, train_size, model, wandb_key, wandb_project):
+    assert not (only_pca and wandb_key is not None), "Pca can be run only with local logging"
+
     # construct args for directory/wandb names
     cfg_args = {'benchmark': benchmark, 'dataset': dataset, 'n_evals': n_evals, 'seed': seed, 'data_seed': data_seed,
                 'train_size': train_size, 'use_all_proxies': use_all_proxies,
-                'use_features': use_features, 'proxy': None, 'features': None}
+                'use_features': use_features, 'proxy': None, 'features': None, 'standardize': standardize,
+                'pca_loadings': pca_loadings}
     if not only_pca:
         cfg_args['model'] = model
     if not use_all_proxies:
-        cfg_args['proxy'] = '-'.join(proxy.split(',')) if proxy is not None else None
+        cfg_args['proxy'] = proxy
         cfg_args['use_flops_params'] = use_flops_params
     if use_features:
-        cfg_args['features'] = '-'.join(features.split(',')) if features is not None else None
+        cfg_args['features'] = features
     if columns_json is not None:
         cfg_args.update(parse_columns_filename(columns_json))
 
@@ -164,14 +213,14 @@ def main(out, out_prefix, benchmark, searchspace_path, dataset, cfg, meta, featu
             importances_df.append({'seed': s, **imps})
         importances_df = pd.DataFrame(importances_df)
 
-    _, pca_df = do_pca(dataset, dataset, n_components)
-    _, pca_train_df = do_pca(data_splits["train_X"], dataset, n_components)
-
     timestamp = datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S")
     if wandb_key is not None:
-        log_to_wandb(wandb_key, wandb_project, timestamp, cfg_args, result_df, importances_df, pca_df, pca_train_df)
+        log_to_wandb(wandb_key, wandb_project, timestamp, cfg_args, result_df, importances_df)
     else:
-        log_to_csv(out, out_prefix, timestamp, cfg_args, result_df, importances_df, pca_df, pca_train_df)
+        # do pca only for local runs (for feature selection)
+        pca_data = do_pca(dataset, dataset, y, n_components, compute_loadings=pca_loadings, standardize=standardize)
+        pca_train_data = do_pca(data_splits["train_X"], dataset, y, n_components, compute_loadings=pca_loadings, standardize=standardize)
+        log_to_csv(out, out_prefix, timestamp, cfg_args, result_df, importances_df, pca_data, pca_train_data)
 
 
 if __name__ == "__main__":

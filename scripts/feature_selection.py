@@ -16,9 +16,9 @@ def get_cols_list(imps, cols, n_cols):
 @click.option('--imp_path', required=True)
 @click.option('--out_prefix', default='', help="Output file name prefix")
 @click.option('--n_features', default=20)
-@click.option('--mode', default='mean', help='One of (mean, row, idx). Mean means aggregating scores over seeds, row '
-                                             'is selecting n features // n rows for every row, idx is selecting '
-                                             'features for idx-th row.')
+@click.option('--mode', default='mean', help='One of (mean, row, idx, norm). Mean means aggregating scores over seeds,'
+                                             'row is selecting n features // n rows for every row, idx is selecting '
+                                             'features for idx-th row, norm is l2 norm of rows.')
 @click.option('--idx', default=0, help="If mode == idx, id of the row for feature selection.")
 def main(imp_path, out_prefix,  n_features, mode, idx):
     imps = pd.read_csv(imp_path)
@@ -33,7 +33,9 @@ def main(imp_path, out_prefix,  n_features, mode, idx):
     elif mode == 'idx':
         imps = imps.iloc[idx]
         res_cols = get_cols_list(imps.to_numpy(), imps.index, n_features)
-
+    elif mode == 'norm':
+        imps = sum(imps.iloc[i] ** 2 for i in range(len(imps)))
+        res_cols = get_cols_list(imps.to_numpy(), imps.index, n_features)
     else:
         raise ValueError("Invalid mode")
 
