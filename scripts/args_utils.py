@@ -28,6 +28,8 @@ def parser_add_flag(parser, flag_pos, flag_neg, default, flag_name=None, help_po
 
 def parser_add_dataset_defaults(parser):
     parser.add_argument('--args_json', default=None, help="Json file with args; will overwrite args passed on the command line.")
+    parser.add_argument('--searchspace_path', default='../data', help="Directory with json files of proxy scores "
+                                                                      "(from NASLib).")
     parser.add_argument('--benchmark', default='nb201', help="Which NAS benchmark to use (e.g. nb201).")
     parser.add_argument('--dataset', default='cifar10', help="Which dataset from the benchmark to use (e.g. cifar10).")
     parser.add_argument('--data_seed', default=42, type=int, help="Seed for dataset splits.")
@@ -36,7 +38,7 @@ def parser_add_dataset_defaults(parser):
     parser.add_argument('--features', default=None, type=str, help="Comma separated list of features to use.")
     parser.add_argument('--cfg', default=None, type=str, help="Path to config file for proxy dataset creation.")
     parser.add_argument('--meta', default=None, type=str, help="Path to json file with unique nets filtered out.")
-    parser_add_flag(parser, 'use_all_proxies', 'use_all_proxies', 'not_all_proxies', False,
+    parser_add_flag(parser, 'use_all_proxies', 'not_all_proxies', False,
                     help_pos="Use all available proxies.", help_neg="Use only selected proxies.")
     parser_add_flag(parser, 'use_features', 'no_features', True,
                     help_neg="Use only proxies and not features.")

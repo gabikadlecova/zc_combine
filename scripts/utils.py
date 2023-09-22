@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import time
 from scipy.stats import kendalltau, spearmanr
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
@@ -48,7 +49,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     meta = meta if keep_uniques else None
     if meta is not None:
         with open(meta, 'r') as f:
-    meta = json.load(f)
+            meta = json.load(f)
 
     zero_unreachable = zero_unreachable if keep_uniques else False
     data = load_bench_data(searchspace_path, benchmark, dataset, filter_nets=meta, zero_unreachable=zero_unreachable)
