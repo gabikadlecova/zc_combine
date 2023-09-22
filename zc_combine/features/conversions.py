@@ -20,13 +20,14 @@ def remap_values(c, val1, val2):
     return val1 if c == val2 else val2
 
 
-def keep_only_isomorpic_nb201(data, meta, zero_is_1=True, net_key='net'):
+def keep_only_isomorpic_nb201(data, meta, zero_is_1=True, net_key='net', copy=True):
     nb201_unique = [v['nb201-string'] for k, v in meta['ids'].items() if k == v['isomorph']]
     unique_nets = {str(convert_str_to_op_indices(nu)) for nu in nb201_unique}
     if not zero_is_1:
         unique_nets = {''.join([remap_values(c, '0', '1') for c in n]) for n in unique_nets}
 
-    return data[data[net_key].isin(unique_nets)].copy()
+    res = data[data[net_key].isin(unique_nets)]
+    return res.copy() if copy else res
 
 
 def nb101_to_graph(net, net_key='net'):
