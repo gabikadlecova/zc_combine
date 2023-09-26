@@ -13,7 +13,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from utils import get_data_splits, load_feature_proxy_dataset, get_timestamp
-from args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args
+from args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
 
 
 def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings=True, standardize=True):
@@ -89,21 +89,7 @@ def log_to_csv(out, out_prefix, timestamp, config_args, pca_data, pca_train_data
 
 
 def run_pca(args):
-    cfg_keys = ['benchmark', 'dataset', 'data_seed', 'train_size', 'use_all_proxies', 'use_features']
-    cfg_args = {k: args[k] for k in cfg_keys}
-
-    cfg_args['proxy'] = None
-    cfg_args['features'] = None
-
-    if not args['use_all_proxies']:
-        cfg_args['proxy'] = args['proxy']
-        cfg_args['use_flops_params'] = args['use_flops_params']
-    if args['use_features']:
-        cfg_args['features'] = args['features']
-
-    cfg_args['standardize'] = args['standardize'],
-    cfg_args['pca_loadings'] = args['pca_loadings']
-    cfg_args['n_components'] = args['n_components']
+    cfg_args = log_dataset_args(args)
 
     dataset, y = load_feature_proxy_dataset(args['searchspace_path'], args['benchmark'], args['dataset'],
                                             cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
@@ -120,7 +106,7 @@ def run_pca(args):
     pca_data = do_pca(dataset, dataset, y, n_components, compute_loadings=loadings, standardize=standardize)
     pca_train_data = do_pca(data_splits["train_X"], dataset, y, n_components, compute_loadings=loadings,
                             standardize=standardize)
-    log_to_csv(args['out'], args['out_prefix'], get_timestamp(), cfg_args, pca_data, pca_train_data, args['plot'])
+    log_to_csv(args['out_'], args['out_prefix'], get_timestamp(), cfg_args, pca_data, pca_train_data, args['plot'])
 
 
 if __name__ == "__main__":
@@ -130,7 +116,7 @@ if __name__ == "__main__":
 
     parser_add_dataset_defaults(parser)
 
-    parser.add_argument('--out', type=str, help="Directory for output saving (subdir with timestamp will"
+    parser.add_argument('--out_', type=str, help="Directory for output saving (subdir with timestamp will"
                         " be created).")
     parser.add_argument('--out_prefix', default=None, type=str, help="Prefix of the subdirectory.")
     parser.add_argument('--n_components', default=2, type=int, help="Number of PCA components computed.")

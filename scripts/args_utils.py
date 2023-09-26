@@ -26,6 +26,22 @@ def parser_add_flag(parser, flag_pos, flag_neg, default, flag_name=None, help_po
     parser.set_defaults(**{flag_name: default})
 
 
+def log_dataset_args(args):
+    cfg_args = {k: v for k, v in args.items() if not k.endswith('_')}
+
+    cfg_keys = ['benchmark', 'dataset', 'data_seed', 'train_size', 'use_all_proxies', 'use_features']
+    cfg_args = {k: args[k] for k in cfg_keys}
+
+    if args['use_all_proxies']:
+        cfg_args['proxy'] = None
+        cfg_args['use_flops_params'] = None
+
+    if not args['use_features']:
+        args['features'] = None
+
+    return cfg_args
+
+
 def parser_add_dataset_defaults(parser):
     parser.add_argument('--args_json', default=None, help="Json file with args; will overwrite args passed on the command line.")
     parser.add_argument('--searchspace_path', default='../data', help="Directory with json files of proxy scores "

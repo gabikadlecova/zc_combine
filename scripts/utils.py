@@ -229,19 +229,5 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
     return res
 
 
-def parse_columns_filename(path):
-    path, _ = os.path.splitext(os.path.basename(path))
-
-    args = path.split('-')
-    mode_idx = 'idx' in path
-    has_prefix = 5 if mode_idx else 4
-    has_prefix = len(args) == has_prefix
-
-    names = ['prefix'] if has_prefix else []
-    names = ['name', *names, 'n_features', 'mode']
-    names = [*names, 'idx'] if mode_idx else names
-    return {f"cols_{n}": v for n, v in zip(names, args)}
-
-
 def get_timestamp():
-    return datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S")
+    return datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S.%3N")
