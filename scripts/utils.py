@@ -230,4 +230,4 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
 
 
 def get_timestamp():
-    return datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S.%3N")
+    return datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S-%f")

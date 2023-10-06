@@ -85,15 +85,16 @@ def log_to_csv(out, out_prefix, timestamp, config_args, pca_data, pca_train_data
         _plot_pca(pca_train_data, 'Train data fit', os.path.join(out_name, 'train_pca.png'))
 
     log_csv(pca_df, 'pca')
-    log_csv(pca_train_df, 'pca_train_fit')
+    log_csv(pca_train_df, 'pca_train')
+    print(out_name)
 
 
 def run_pca(args):
     cfg_args = log_dataset_args(args)
 
-    dataset, y = load_feature_proxy_dataset(args['searchspace_path'], args['benchmark'], args['dataset'],
-                                            cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
-                                            meta=args['meta'], use_features=args['use_features'],
+    dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
+                                            cfg=args['cfg_'], features=args['features'], proxy=args['proxy'],
+                                            meta=args['meta_'], use_features=args['use_features'],
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
                                             zero_unreachable=args['zero_unreachables'],
@@ -106,7 +107,7 @@ def run_pca(args):
     pca_data = do_pca(dataset, dataset, y, n_components, compute_loadings=loadings, standardize=standardize)
     pca_train_data = do_pca(data_splits["train_X"], dataset, y, n_components, compute_loadings=loadings,
                             standardize=standardize)
-    log_to_csv(args['out_'], args['out_prefix'], get_timestamp(), cfg_args, pca_data, pca_train_data, args['plot'])
+    log_to_csv(args['out_'], args['out_prefix'], get_timestamp(), cfg_args, pca_data, pca_train_data, args['plot_'])
 
 
 if __name__ == "__main__":
@@ -120,7 +121,7 @@ if __name__ == "__main__":
                         " be created).")
     parser.add_argument('--out_prefix', default=None, type=str, help="Prefix of the subdirectory.")
     parser.add_argument('--n_components', default=2, type=int, help="Number of PCA components computed.")
-    parser_add_flag(parser, 'plot', 'no_plot', False, help_pos="Plot PCA and save it to out dir.")
+    parser_add_flag(parser, 'plot_', 'no_plot_', False, help_pos="Plot PCA and save it to out dir.")
     parser_add_flag(parser, 'standardize', 'no_standardize', False,
                     help_pos="Standardize data before doing PCA.")
     parser_add_flag(parser, 'pca_loadings', 'pca_coef', False,

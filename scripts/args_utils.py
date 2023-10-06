@@ -8,13 +8,18 @@ import warnings
 def parse_and_read_args(parser):
     args = parser.parse_args()
     args = vars(args)
-    arg_file = args['args_json']
+    arg_file = args['args_json_']
+
+    cmd_args = {s[2:] for s in sys.argv if s.startswith('--')}
 
     # overwrite command line args with args from file
     if arg_file is not None:
         with open(arg_file, 'r') as f:
             arg_file = json.load(f)
-            args = args.update(arg_file)
+            # load all args except those passed to the script on the command line
+            for k, v in arg_file.items():
+                if k not in cmd_args:
+                    args[k] = v
 
     return args
 
@@ -29,9 +34,6 @@ def parser_add_flag(parser, flag_pos, flag_neg, default, flag_name=None, help_po
 def log_dataset_args(args):
     cfg_args = {k: v for k, v in args.items() if not k.endswith('_')}
 
-    cfg_keys = ['benchmark', 'dataset', 'data_seed', 'train_size', 'use_all_proxies', 'use_features']
-    cfg_args = {k: args[k] for k in cfg_keys}
-
     if args['use_all_proxies']:
         cfg_args['proxy'] = None
         cfg_args['use_flops_params'] = None
@@ -43,8 +45,8 @@ def log_dataset_args(args):
 
 
 def parser_add_dataset_defaults(parser):
-    parser.add_argument('--args_json', default=None, help="Json file with args; will overwrite args passed on the command line.")
-    parser.add_argument('--searchspace_path', default='../data', help="Directory with json files of proxy scores "
+    parser.add_argument('--args_json_', default=None, help="Json file with args; will overwrite args passed on the command line.")
+    parser.add_argument('--searchspace_path_', default='../data', help="Directory with json files of proxy scores "
                                                                       "(from NASLib).")
     parser.add_argument('--benchmark', default='nb201', help="Which NAS benchmark to use (e.g. nb201).")
     parser.add_argument('--dataset', default='cifar10', help="Which dataset from the benchmark to use (e.g. cifar10).")
@@ -52,8 +54,8 @@ def parser_add_dataset_defaults(parser):
     parser.add_argument('--train_size', default=100, type=int, help="Train split size.")
     parser.add_argument('--proxy', default=None, type=str, help="Comma separated list of proxies to use.")
     parser.add_argument('--features', default=None, type=str, help="Comma separated list of features to use.")
-    parser.add_argument('--cfg', default=None, type=str, help="Path to config file for proxy dataset creation.")
-    parser.add_argument('--meta', default=None, type=str, help="Path to json file with unique nets filtered out.")
+    parser.add_argument('--cfg_', default=None, type=str, help="Path to config file for proxy dataset creation.")
+    parser.add_argument('--meta_', default=None, type=str, help="Path to json file with unique nets filtered out.")
     parser_add_flag(parser, 'use_all_proxies', 'not_all_proxies', False,
                     help_pos="Use all available proxies.", help_neg="Use only selected proxies.")
     parser_add_flag(parser, 'use_features', 'no_features', True,

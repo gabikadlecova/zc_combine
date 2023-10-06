@@ -28,12 +28,12 @@ cd scripts
 
 - fit a random forest on nb201 features, flops, params and jacov (sample size 1000)
 ```
-python train_on_features.py --out OUT_DIR --benchmark nb201 --cfg ../zc_combine/configs/nb201_first.json \
+python train_on_features.py --out_ OUT_DIR --benchmark nb201 --cfg ../zc_combine/configs/nb201_first.json \
     --meta ../data/meta.json --proxy jacov --model rf --train_size 1000
 ```
 
 - fit xgboost on all nb201 proxies and no features (sample size 100)
 ```
-python train_on_features.py --out OUT_DIR --benchmark nb201 --cfg ../zc_combine/configs/nb201_first.json \
+python train_on_features.py --out_ OUT_DIR --benchmark nb201 --cfg ../zc_combine/configs/nb201_first.json \
     --meta ../data/meta.json --model xgb --use_all_proxies --no_features
 ```

@@ -1,18 +1,12 @@
 import argparse
 import os.path
-import click
 import json
 import numpy as np
 import pandas as pd
-import time
-
-
-from datetime import datetime
 
 from args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args
-from utils import load_bench_data, get_net_data, get_dataset, get_data_splits, eval_model, parse_columns_filename
+from utils import load_feature_proxy_dataset, get_data_splits, eval_model, get_timestamp
 from zc_combine.predictors import predictor_cls
-
 
 
 def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df):
@@ -22,6 +16,8 @@ def log_to_csv(out, out_prefix, timestamp, config_args, res_df, imp_df):
     name_args = {k: config_args[k] for k in ['benchmark', 'dataset', 'train_size', 'use_all_proxies']}
     name_args['model'] = config_args['model'] if 'model' in config_args else 'pca'
     out_name = '_'.join(f"{k}-{v}" for k, v in name_args.items())
+    out_prefix = out_prefix if out_prefix is not None else ''
+    out_prefix = f"{out_prefix}-" if len(out_prefix) else ''
     out_name = os.path.join(out, f"{out_prefix}{out_name}-{timestamp}")
     os.mkdir(out_name)
 
@@ -56,9 +52,9 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df):
 def train_and_eval(args):
     cfg_args = log_dataset_args(args)
 
-    dataset, y = load_feature_proxy_dataset(args['searchspace_path'], args['benchmark'], args['dataset'],
-                                            cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
-                                            meta=args['meta'], use_features=args['use_features'],
+    dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
+                                            cfg=args['cfg_'], features=args['features'], proxy=args['proxy'],
+                                            meta=args['meta_'], use_features=args['use_features'],
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
                                             zero_unreachable=args['zero_unreachables'],
