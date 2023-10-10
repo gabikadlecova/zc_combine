@@ -1,0 +1,7 @@
+{
+  "_raw_pca": ["--pca_loadings --out_ pca"],
+  "data_seed": "42-47",
+  "_raw_columns": [
+    "--use_all_proxies", "--no_features --use_all_proxies", ""],
+  "_raw_standardize":  ["--standardize", ""]
+}

@@ -1,0 +1,8 @@
+{
+  "data_seed": "42-47",
+  "_raw_columns": [
+    "--use_all_proxies", "--no_features --use_all_proxies", "",
+    "--proxy epe_nas", "--proxy fisher",  "--proxy grad_norm", "--proxy grasp", "--proxy jacov", "--proxy l2_norm",
+    "--proxy nwot", "--proxy plain", "--proxy snip", "--proxy synflow", "--proxy zen"],
+  "model": ["rf", "xgb_tuned"]
+}

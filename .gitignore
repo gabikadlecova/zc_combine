@@ -6,6 +6,8 @@ __pycache__/
 plots_zcs
 *out/
 
+experiment_settings.csv
+
 # C extensions
 *.so
 
