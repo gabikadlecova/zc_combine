@@ -182,13 +182,16 @@ def _dict_to_lists(mdict, res_dict, prefix='', mean_m=False):
 
 
 def eval_model(model_cls, data, n_times=1, random_state=43, subsample=True, sample_size=200, sample_times=10):
-    res = {'seed': []}
+    res = {'seed': [], 'fit_time': []}
     models = []
 
     for i in range(n_times):
         res['seed'].append(random_state + i)
         model = model_cls(random_state + i)
+
+        start = time.time()
         model.fit(data['train_X'], data['train_y'])
+        res['fit_time'].append(time.time() - start)
 
         def save_preds(sample=False):
             res_metrics = {}
@@ -219,7 +222,10 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
         idxs = state.randint(0, len(test_y), sample)
         test_X, test_y = test_X.iloc[idxs], test_y.iloc[idxs]
 
+    start = time.time()
     preds = model.predict(test_X)
+    res['test_time'] = time.time() - start
+
     true = test_y
 
     res['r2'] = r2_score(true, preds)

@@ -49,7 +49,7 @@ def main(imp_path, out_prefix,  n_features, threshold, mode, idx):
 
     out_prefix = f"{out_prefix}-" if len(out_prefix) else ''
     out_path, ext = os.path.splitext(imp_path)
-    out_path = f"{out_path}-{out_prefix}{n_features}-{mode}{'' if mode != 'idx' else f'-{idx}'}.json"
+    out_path = f"{out_path}-{out_prefix}{f'f_{n_features}' if n_features is not None else f't_{threshold}'}-{mode}{'' if mode != 'idx' else f'-{idx}'}.json"
     with open(out_path, 'w') as f:
         json.dump(res_cols, f)
 
