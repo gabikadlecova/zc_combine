@@ -2,8 +2,8 @@
 
 features_out=`python compute_pca.py  $pca_args`
 
-if [ -n $3]; then
-  SUFFIX="-$3"
+if [ -n $row_id ]; then
+  SUFFIX="-$row_id"
 fi
 
 for name in "" "_train"; do

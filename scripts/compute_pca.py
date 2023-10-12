@@ -93,8 +93,8 @@ def run_pca(args):
     cfg_args = log_dataset_args(args)
 
     dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
-                                            cfg=args['cfg_'], features=args['features'], proxy=args['proxy'],
-                                            meta=args['meta_'], use_features=args['use_features'],
+                                            cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
+                                            meta=args['meta'], use_features=args['use_features'],
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
                                             zero_unreachable=args['zero_unreachables'],

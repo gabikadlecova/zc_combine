@@ -24,7 +24,7 @@ def get_cols_list(imps, cols, n_cols=None, threshold=None):
                                              'row is selecting n features // n rows for every row, idx is selecting '
                                              'features for idx-th row, norm is l2 norm of rows.')
 @click.option('--idx', default=0, help="If mode == idx, id of the row for feature selection.")
-def main(imp_path, out_prefix,  n_features, threshold, mode, idx):
+def main(imp_path, out_prefix, n_features, threshold, mode, idx):
     assert n_features is not None or threshold is not None, "Must provide either n_features or threshold for feature selection."
 
     imps = pd.read_csv(imp_path)
