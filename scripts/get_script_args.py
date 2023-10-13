@@ -16,7 +16,6 @@ def main(input_file, id, step):
     df = pd.read_csv(input_file, index_col=0)
 
     while True:
-        id = id + step
         if id >= len(df):
             break
 
@@ -27,6 +26,7 @@ def main(input_file, id, step):
         res.append(f"row_id={row.name}")
 
         print(' '.join(res))
+        id = id + step
 
 if __name__ == "__main__":
     main()

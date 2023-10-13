@@ -10,5 +10,7 @@ shift 3
 
 python get_script_args.py --input_file $infile --id $id --step $step | while read row; do
   echo $row
-  eval $row; $@
+  eval $row
+  export pca_args=$pca_args feature_args=$feature_args train_args=$train_args row_id=$row_id
+  $@  
 done
