@@ -141,13 +141,13 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
         assert cfg is not None, "Must provide config when using network features."
         feature_dataset = get_feature_dataset(nets, cfg, feature_dicts[get_bench_key(benchmark)], subset=features)
 
-    feature_dataset = [f for f in feature_dataset.values()]
-
     # save to cache path if features were just created
     if cache_path is not None and not os.path.exists(cache_path):
         save_data = {'dataset': feature_dataset, 'version_key': version_key}
         with open(cache_path, 'wb') as f:
             pickle.dump(save_data, f)
+
+    feature_dataset = [f for f in feature_dataset.values()]
 
     return feature_dataset
 

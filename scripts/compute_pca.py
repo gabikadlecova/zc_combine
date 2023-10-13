@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from utils import get_data_splits, load_feature_proxy_dataset, get_timestamp
+from utils import get_data_splits, load_feature_proxy_dataset, get_timestamp, create_cache_filename
 from args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
 
 
