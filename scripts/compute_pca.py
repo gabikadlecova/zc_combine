@@ -92,13 +92,19 @@ def log_to_csv(out, out_prefix, timestamp, config_args, pca_data, pca_train_data
 def run_pca(args):
     cfg_args = log_dataset_args(args)
 
+    cache_path = None
+    if args['use_features'] and args['cache_dir_'] is not None:
+        cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'])
+
     dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
                                             cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
                                             meta=args['meta'], use_features=args['use_features'],
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
                                             zero_unreachable=args['zero_unreachables'],
-                                            keep_uniques=args['keep_uniques'])
+                                            keep_uniques=args['keep_uniques'],
+                                            cache_path=cache_path,
+                                            version_key=args['version_key'])
 
     # train test split, access splits - res['train_X'], res['test_y'],...
     data_splits = get_data_splits(dataset, y, random_state=args['data_seed'], train_size=args['train_size'])

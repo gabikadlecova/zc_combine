@@ -16,8 +16,4 @@ for name in "" "_train"; do
       --args_json_ "$features_out/args.json" --out_prefix pca"$name"-"$PREFIX""$SUFFIX"
 done
 
-
-python train_on_features.py --wandb_key_ $2 $train_args \
-        --args_json_ "$features_out/args.json"
-
 cat "$features_out/args.json" > /dev/null && rm -rf $features_out

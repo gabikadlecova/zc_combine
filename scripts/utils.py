@@ -76,6 +76,16 @@ bench_names = {
 }
 
 
+def create_cache_filename(cache_dir, cfg_path, features, version_key):
+    assert os.path.isdir(cache_dir)
+
+    cfg_name = os.path.splitext(os.path.basename(cfg_path))[0]
+    features = '' if features is None else '_'.join(sorted(features.split(',')))
+    features = f'-{features}' if len(features) else features
+    version_key = f'-{version_key}' if version_key is not None and len(version_key) else version_key
+    return os.path.join(cache_dir, f'{cfg_name}{features}{version_key}.pickle')
+
+
 def get_bench_key(benchmark):
     return bench_names[benchmark] if benchmark in bench_names else benchmark
 

@@ -48,6 +48,9 @@ def parser_add_dataset_defaults(parser):
     parser.add_argument('--args_json_', default=None, help="Json file with args; will overwrite args passed on the command line.")
     parser.add_argument('--searchspace_path_', default='../data', help="Directory with json files of proxy scores "
                                                                       "(from NASLib).")
+    parser.add_argument('--cache_dir_', default=None, help="Path to cache the feature datasets - filenames are composed "
+                                                           "from cfg file name, features and version_key.")
+    parser.add_argument('--version_key', default=None, help="Version key of the cached dataset.")
     parser.add_argument('--benchmark', default='nb201', help="Which NAS benchmark to use (e.g. nb201).")
     parser.add_argument('--dataset', default='cifar10', help="Which dataset from the benchmark to use (e.g. cifar10).")
     parser.add_argument('--data_seed', default=42, type=int, help="Seed for dataset splits.")
