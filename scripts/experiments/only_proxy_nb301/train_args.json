@@ -1,0 +1,9 @@
+{
+  "data_seed": "42-47",
+  "benchmark": "nb301",
+  "train_size": [20, 100, 1000],
+  "_raw_settings": ["--out_ train"],
+  "_raw_columns": ["--use_all_proxies --no_features"],
+  "model": ["rf"],
+  "wandb_project_": "zc_nb301"
+}
