@@ -4,5 +4,5 @@
   "_raw_settings": ["--out_ train --meta ../data/meta.json"],
   "_raw_columns": ["--use_all_proxies --no_features"],
   "model": ["rf", "xgb_tuned"],
-  "wandb_project_": "zc_searchspaces"
+  "wandb_project_": "zc_nb201"
 }

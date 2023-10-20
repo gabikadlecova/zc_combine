@@ -8,5 +8,5 @@
     "--proxy epe_nas", "--proxy fisher",  "--proxy grad_norm", "--proxy grasp", "--proxy jacov", "--proxy l2_norm",
     "--proxy nwot", "--proxy plain", "--proxy snip", "--proxy synflow", "--proxy zen"],
   "model": ["rf"],
-  "wandb_project_": "zc_searchspaces"
+  "wandb_project_": "zc_nb201"
 }

@@ -1,0 +1,4 @@
+{
+  "model": ["rf"],
+  "wandb_project_": "zc_nb301_pca"
+}
