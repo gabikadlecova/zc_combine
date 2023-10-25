@@ -3,8 +3,9 @@ import os.path
 import json
 import numpy as np
 import pandas as pd
+import pdb
 
-from args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args
+from args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
 from utils import load_feature_proxy_dataset, get_data_splits, eval_model, get_timestamp, create_cache_filename
 from zc_combine.predictors import predictor_cls
 
@@ -44,7 +45,7 @@ def log_to_wandb(key, project_name, timestamp, config_args, res_df, imp_df):
         wandb.log({name: wandb.Table(dataframe=df)})
         wandb.log({f"{pref}{k}_mean": np.mean(df[k]) for k in df.columns})
         wandb.log({f"{pref}{k}_std": np.std(df[k]) for k in df.columns})
-
+    
     log_stats(res_df, 'results')
     log_stats(imp_df, 'feature_importances', pref='featimp_')
 
@@ -64,7 +65,12 @@ def train_and_eval(args):
                                             zero_unreachable=args['zero_unreachables'],
                                             keep_uniques=args['keep_uniques'],
                                             cache_path=cache_path,
-                                            version_key=args['version_key'])
+                                            version_key=args['version_key'], 
+                                            robustness_evals=args["robustness_evals"], 
+                                            robustness_data_path=args["robustness_data_path"],
+                                            multi_objective=args["multi_objective"], 
+                                            attack=args["attack"], eps_attack=args["eps_attack"]
+                                            )
 
     # select subset of columns based on previously saved data
     if args['columns_json_'] is not None:
@@ -120,7 +126,15 @@ if __name__ == "__main__":
                                                                 "(with random state seed + i).")
     parser.add_argument('--seed', default=42, type=int, help="Starting seed.")
     parser.add_argument('--model', default='rf', type=str, help="Model to use (rf, xgb, xgb_tuned).")
-
+    parser_add_flag(parser, 'robustness_evals', 'no_robustness_evals', True,
+                    help_pos="Evaluate the robustness of the architectures",
+                    help_neg="Evaluate only the clean accuracy of the architectures")
+    parser.add_argument('--robustness_data_path', default='../data/robustness-dataset/')
+    parser.add_argument('--attack', default='fgsm@Linf', help="fgsm, pgd, aa_apgd-ce, aa_square")
+    parser.add_argument('--eps_attack', default='1.0')
+    parser_add_flag(parser, 'multi_objective', 'single_objective', True,
+                    help_pos="Use the clean and robust accuracy of the architectures as target",
+                    help_neg="Evaluate ONLY for the clean accuracy of the architectures")
     args = parse_and_read_args(parser)
 
     train_and_eval(args)

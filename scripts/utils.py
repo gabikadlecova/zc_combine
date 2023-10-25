@@ -1,6 +1,7 @@
 import json
 import os.path
 import pickle
+import pdb
 
 import numpy as np
 import pandas as pd
@@ -17,10 +18,14 @@ from zc_combine.fixes.operations import get_ops_edges_nb201, get_ops_edges_tnb10
 from zc_combine.fixes.utils import nb201_zero_out_unreachable
 from zc_combine.utils.naslib_utils import load_search_space, parse_scores
 
+from robustness_dataset import RobustnessDataset
+from naslib.search_spaces.nasbench201.conversions import convert_op_indices_to_str
+from zc_combine.fixes.operations import parse_ops_nb201
 
 def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, features=None, proxy=None, meta=None,
                                use_features=True, use_all_proxies=False, use_flops_params=True, zero_unreachable=True,
-                               keep_uniques=True, cache_path=None, version_key=None):
+                               keep_uniques=True, cache_path=None, version_key=None, 
+                               robustness_evals=False, robustness_data_path=None, multi_objective=False, attack=None, eps_attack=None):
     """
         Load feature and proxy datasets, feature dataset can be precomputed or will be loaded from the config.
         Validation accuracy will be returned as the target.
@@ -55,6 +60,32 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     data = load_bench_data(searchspace_path, benchmark, dataset, filter_nets=meta, zero_unreachable=zero_unreachable)
     nets = get_net_data(data, benchmark)
 
+    if robustness_evals:
+        if benchmark != 'nb201':
+            sys.exit()
+        rob_data = RobustnessDataset(path=robustness_data_path)
+        results = rob_data.query(
+            # data specifies the evaluated dataset
+            data = dataset,
+            # measure specifies the evaluation type
+            measure = "accuracy", # ["accuracy", "confidence", "cm"],
+            # key specifies the attack types
+            key = RobustnessDataset.keys_clean + RobustnessDataset.keys_adv + RobustnessDataset.keys_cc
+            )
+        rob_nb201_ids = []
+        rob_accs = []
+        import time
+        start_time = time.time()
+        for _, row in data.iterrows():
+            string = convert_op_indices_to_str(parse_ops_nb201(row))
+            rob_nb201_id = rob_data.get_uid(rob_data.string_to_id(string))
+            rob_nb201_ids.append(rob_nb201_id)
+            eps_index = [i for i,x in enumerate(rob_data.meta["epsilons"][attack]) if x == float(eps_attack)][0]
+            rob_accs.append(results[dataset][attack]["accuracy"][rob_nb201_id][eps_index]*100)
+
+        # data["rob_nb201_id"] = rob_nb201_ids
+        data[attack+"_"+eps_attack] = rob_accs
+
     if cfg is not None:
         with open(cfg, 'r') as f:
             cfg = json.load(f)
@@ -64,6 +95,9 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
 
     data, y = get_dataset(data, nets, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                           use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
+                          robustness_evals=robustness_evals, 
+                          multi_objective=multi_objective, 
+                          robust_target=attack+"_"+eps_attack,
                           cache_path=cache_path, version_key=version_key)
     return data, y
 
@@ -153,7 +187,9 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
 
 
 def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True,
-                use_all_proxies=False, use_flops_params=True, cache_path=None, version_key=None):
+                use_all_proxies=False, use_flops_params=True, 
+                robustness_evals=False, multi_objective=False, robust_target=None,
+                cache_path=None, version_key=None):
     feature_dataset = []
     # compute or load network features
     if use_features:
@@ -168,9 +204,22 @@ def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None,
     proxy_df = data[[c for c in data.columns if c in proxy_cols or c == 'val_accs']]
 
     # get data and y
-    res_data = pd.concat([*feature_dataset, proxy_df], axis=1)
-    y = res_data['val_accs']
-    res_data.drop(columns=['val_accs'], inplace=True)
+    if robustness_evals:
+        if robust_target not in proxy_df:
+            res_data = pd.concat([*feature_dataset, proxy_df, data[robust_target]], axis=1)
+        else:
+            res_data = pd.concat([*feature_dataset, proxy_df], axis=1)
+    else:
+        res_data = pd.concat([*feature_dataset, proxy_df], axis=1)
+    if robustness_evals and not multi_objective:
+        y = res_data[robust_target]
+        res_data.drop(columns=['val_accs', robust_target], inplace=True)
+    elif multi_objective and robustness_evals:
+        y = res_data[['val_accs', robust_target]]
+        res_data.drop(columns=['val_accs', robust_target], inplace=True)
+    else:
+        y = res_data['val_accs']
+        res_data.drop(columns=['val_accs'], inplace=True)
 
     res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
     return res_data, y
@@ -241,7 +290,10 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
     res['r2'] = r2_score(true, preds)
     res['mse'] = mean_squared_error(true, preds)
     res['tau'] = kendalltau(preds, true)[0]
-    res['corr'] = spearmanr(preds, true)[0]
+    if len(preds.shape) == 2:
+        res['corr'] = np.mean([spearmanr(preds[:,0], true.iloc[:,0])[0], spearmanr(preds[:,1], true.iloc[:,1])[0]])
+    else:
+        res['corr'] = spearmanr(preds, true)[0]
     return res
 
 
