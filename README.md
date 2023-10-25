@@ -5,9 +5,10 @@ Exploring combinations of zero-cost proxies
 - follow [README](https://github.com/automl/NASLib/tree/zerocost) in `zerocost` branch of `NASlib`
 - copy files to `./data`
 
-2. download `meta.json` for filtering unique nb201 nets
+2. download `meta.json` and robustness-data for filtering unique nb201 nets
 - from robustness benchmark [data](https://uni-siegen.sciebo.de/s/aFzpxCvTDWknpMA)
-- download meta.zip, unzip to `./data/meta.json` 
+- download meta.zip, unzip to `./data/robustness-dataset/meta.json`
+- downlad all robustness data, untzip to `./data/robustness-dataset/{dataset}`
 - NOTE: aside from filtering using this filter, other isomorphic nets are also left out
   - e.g. (2, 1, 0, 1, 0, 1) and (2, 1, 0, 1, 0, 0) are the same, since the last op is 1 == zero op
   - see zc_combine/fixes/operations.py for edge and op explanation per search space
