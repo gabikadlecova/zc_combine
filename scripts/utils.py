@@ -161,7 +161,7 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
     return feature_dataset
 
 
-def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True,
+def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True,
                 use_all_proxies=False, use_onehot=False, use_flops_params=True, cache_path=None, version_key=None):
     feature_dataset = []
     # compute or load network features
