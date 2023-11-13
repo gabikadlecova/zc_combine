@@ -1,8 +1,13 @@
+import naslib
 import networkx as nx
 import numpy as np
+from naslib.search_spaces.nasbench101.conversions import convert_tuple_to_spec
+from naslib.search_spaces.nasbench201.encodings import encode_adjacency_one_hot_op_indices
 
 from naslib.search_spaces.nasbench301.conversions import convert_compact_to_genotype
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
+from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_micro_op_indices
+
 from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301, \
     get_ops_nb101, parse_ops_nb101
 
@@ -97,9 +102,39 @@ def nb301_to_graph(n, net_key="net"):
     return darts_to_graph(genotype.normal), darts_to_graph(genotype.reduce)
 
 
+def encode_to_onehot(net, benchmark):
+    return onehot_conversions[benchmark](net)
+
+
+def nb101_to_onehot(net):
+    net = convert_tuple_to_spec(net)
+    matrix_dim = len(net['matrix'])
+    if matrix_dim < 7:
+        padval = 7 - matrix_dim
+        net['matrix'] = np.pad(net['matrix'], [(0, padval), (0, padval)])
+        for _ in range(padval):
+            net['ops'].insert(-1, 'maxpool3x3')
+
+    enc = naslib.search_spaces.nasbench101.encodings.encode_adj(net)
+    if matrix_dim < 7:
+        for i in range(0, 7 - matrix_dim):
+            for oid in range(3):
+                idx = 3 * i + oid
+                enc[-1 - idx] = 0
+    return enc
+
+
 bench_conversions = {
     'zc_nasbench101': nb101_to_graph,
     'zc_nasbench201': nb201_to_graph,
     'zc_nasbench301': nb301_to_graph,
     'zc_transbench101_micro': tnb101_to_graph
+}
+
+
+onehot_conversions = {
+    'zc_nasbench101': nb101_to_onehot,
+    'zc_nasbench201': encode_adjacency_one_hot_op_indices,
+    'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_adj,
+    'zc_transbench101_micro': encode_adjacency_one_hot_transbench_micro_op_indices
 }

@@ -61,6 +61,7 @@ def train_and_eval(args):
                                             meta=args['meta'], use_features=args['use_features'],
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
+                                            use_onehot=args['use_onehot'],
                                             zero_unreachable=args['zero_unreachables'],
                                             keep_uniques=args['keep_uniques'],
                                             target_csv=args['target_csv_'],

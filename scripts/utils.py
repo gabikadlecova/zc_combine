@@ -11,7 +11,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 
 from datetime import datetime
 from zc_combine.features import feature_dicts
-from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions
+from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions, onehot_conversions
 from zc_combine.features.dataset import get_feature_dataset
 from zc_combine.fixes.operations import get_ops_edges_nb201, get_ops_edges_tnb101
 from zc_combine.fixes.utils import nb201_zero_out_unreachable
@@ -19,9 +19,9 @@ from zc_combine.utils.naslib_utils import load_search_space, parse_scores
 
 
 def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, features=None, proxy=None, meta=None,
-                               use_features=True, use_all_proxies=False, use_flops_params=True, zero_unreachable=True,
-                               keep_uniques=True, target_csv=None, target_key='val_accs', cache_path=None,
-                               version_key=None):
+                               use_features=True, use_all_proxies=False, use_flops_params=True, use_onehot=False,
+                               zero_unreachable=True, keep_uniques=True, target_csv=None, target_key='val_accs',
+                               cache_path=None, version_key=None):
     """
         Load feature and proxy datasets, feature dataset can be precomputed or will be loaded from the config.
         Validation accuracy will be returned as the target.
@@ -35,7 +35,8 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
         meta: Json with unique nb201 networks for filtering (can be used for tnb101 too).
         use_features: If True, features will be included.
         use_all_proxies: If True, include all proxies regardless of other settings.
-        use_flops_params: If True, flops and params will be always included.
+        use_flops_params: If True, flops and params will always be included.
+        use_onehot: If True, add onehot encoding of the architecture.
         zero_unreachable: If True, keep only networks with no unreachable operations. Does not lead to all uniques,
             as there are also isomorphisms due to skip connections.
 
@@ -73,7 +74,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
 
     data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
-                       cache_path=cache_path, version_key=version_key)
+                       use_onehot=use_onehot, cache_path=cache_path, version_key=version_key)
     return data, y
 
 
@@ -171,7 +172,7 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
                                                   version_key=version_key)
 
     if use_all_proxies:
-        proxy_cols = set(c for c in data.columns if c not in ['random', 'rank', 'new_net', 'net'])
+        proxy_cols = set(c for c in data.columns if c not in ['random', 'rank', 'new_net', 'net', 'val_accs'])
     else:
         proxy_cols = proxy_cols if proxy_cols is not None else []
         proxy_cols = {'flops', 'params', *proxy_cols} if use_flops_params else set(proxy_cols)
@@ -179,11 +180,14 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
 
     onehot = []
     if use_onehot:
-        onehot.append(load_onehot_encoding(data, benchmark))
+        onehot.append(get_onehot_encoding(data, benchmark))
 
     # get data and y
-    res_data = pd.concat([*feature_dataset, proxy_df], axis=1)
+    res_data = pd.concat([*feature_dataset, proxy_df, *onehot], axis=1)
     res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
+    if 'val_accs' in res_data.columns:
+        res_data.drop(columns='val_accs', inplace=True)
+
     return res_data
 
 
@@ -193,6 +197,14 @@ def get_target(target_data, net_tuples, target_key='val_accs', net_key='net'):
     target_data = target_data.loc[net_tuples].reset_index().set_index('index').rename_axis(None)
 
     return target_data[target_key]
+
+
+def get_onehot_encoding(data, benchmark, net_key='net'):
+    onehot_convert = onehot_conversions[get_bench_key(benchmark)]
+    onehots = {i: onehot_convert(eval(data.loc[i][net_key])) for i in data.index}
+    onehots = pd.DataFrame(onehots.values(), index=onehots.keys())
+    onehots.columns = [f"onehot_{c}" for c in onehots.columns]
+    return onehots
 
 
 def get_data_splits(data, y, **kwargs):
