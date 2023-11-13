@@ -59,6 +59,8 @@ def parser_add_dataset_defaults(parser):
     parser.add_argument('--features', default=None, type=str, help="Comma separated list of features to use.")
     parser.add_argument('--cfg', default=None, type=str, help="Path to config file for proxy dataset creation. Example configs are `zc_combine/configs/*.json`.")
     parser.add_argument('--meta', default=None, type=str, help="Path to the json file with unique nets filtered out (for nb201 and tnb101).")
+    parser.add_argument('--target_csv_', default=None, type=str, help="Optional dataframe with user defined targets.")
+    parser.add_argument('--target_key', default='val_accs', type=str, help="Name of the target to be predicted.")
     parser_add_flag(parser, 'use_all_proxies', 'not_all_proxies', False,
                     help_pos="Use all available proxies.", help_neg="Use only selected proxies.")
     parser_add_flag(parser, 'use_features', 'no_features', True,

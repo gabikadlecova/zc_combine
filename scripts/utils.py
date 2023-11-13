@@ -20,7 +20,8 @@ from zc_combine.utils.naslib_utils import load_search_space, parse_scores
 
 def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, features=None, proxy=None, meta=None,
                                use_features=True, use_all_proxies=False, use_flops_params=True, zero_unreachable=True,
-                               keep_uniques=True, cache_path=None, version_key=None):
+                               keep_uniques=True, target_csv=None, target_key='val_accs', cache_path=None,
+                               version_key=None):
     """
         Load feature and proxy datasets, feature dataset can be precomputed or will be loaded from the config.
         Validation accuracy will be returned as the target.
@@ -39,6 +40,8 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
             as there are also isomorphisms due to skip connections.
 
         keep_uniques: If False, keep all networks.
+        target_csv: If None, val_accs from the proxy json is used. Otherwise, `target_key` column from the loaded csv.
+        target_key: Target key to predict (and extract from the `target_csv`).
         cache_path: Path to either save the feature dataset, or to load from.
         version_key: Version key to check with loaded dataset, or for saving it.
 
@@ -53,7 +56,6 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
 
     zero_unreachable = zero_unreachable if keep_uniques else False
     data = load_bench_data(searchspace_path, benchmark, dataset, filter_nets=meta, zero_unreachable=zero_unreachable)
-    nets = get_net_data(data, benchmark)
 
     if cfg is not None:
         with open(cfg, 'r') as f:
@@ -62,9 +64,16 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     features = features if features is None else features.split(',')
     proxy = proxy.split(',') if proxy is not None else []
 
-    data, y = get_dataset(data, nets, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
-                          use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
-                          cache_path=cache_path, version_key=version_key)
+    # either use validation accuracy as the target, or a user-defined metric in a separate csv file
+    if target_csv is None:
+        y = data[target_key]
+    else:
+        target_df = pd.read_csv(target_csv)
+        y = get_target(target_df, data['net'], target_key=target_key)
+
+    data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
+                       use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
+                       cache_path=cache_path, version_key=version_key)
     return data, y
 
 
@@ -153,10 +162,11 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
 
 
 def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True,
-                use_all_proxies=False, use_flops_params=True, cache_path=None, version_key=None):
+                use_all_proxies=False, use_onehot=False, use_flops_params=True, cache_path=None, version_key=None):
     feature_dataset = []
     # compute or load network features
     if use_features:
+        nets = get_net_data(data, benchmark)
         feature_dataset = load_or_create_features(nets, cfg, benchmark, features=features, cache_path=cache_path,
                                                   version_key=version_key)
 
@@ -165,15 +175,24 @@ def get_dataset(data, nets, benchmark, cfg=None, features=None, proxy_cols=None,
     else:
         proxy_cols = proxy_cols if proxy_cols is not None else []
         proxy_cols = {'flops', 'params', *proxy_cols} if use_flops_params else set(proxy_cols)
-    proxy_df = data[[c for c in data.columns if c in proxy_cols or c == 'val_accs']]
+    proxy_df = data[[c for c in data.columns if c in proxy_cols]]
+
+    onehot = []
+    if use_onehot:
+        onehot.append(load_onehot_encoding(data, benchmark))
 
     # get data and y
     res_data = pd.concat([*feature_dataset, proxy_df], axis=1)
-    y = res_data['val_accs']
-    res_data.drop(columns=['val_accs'], inplace=True)
-
     res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
-    return res_data, y
+    return res_data
+
+
+def get_target(target_data, net_tuples, target_key='val_accs', net_key='net'):
+    # select nets based to net_tuples
+    target_data = target_data.reset_index().set_index(net_key)
+    target_data = target_data.loc[net_tuples].reset_index().set_index('index').rename_axis(None)
+
+    return target_data[target_key]
 
 
 def get_data_splits(data, y, **kwargs):

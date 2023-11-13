@@ -16,7 +16,8 @@ from utils import get_data_splits, load_feature_proxy_dataset, get_timestamp, cr
 from args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
 
 
-def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings=True, standardize=True):
+def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings=True, standardize=True,
+           target_name='val_accs'):
     pca = PCA(n_components=n_components)
 
     if standardize:
@@ -28,25 +29,25 @@ def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings
         pca_data = pca.transform(transform_data)
 
     plot_dd = pd.DataFrame(pca_data)
-    plot_dd['val_accs'] = pd.qcut(transform_y.reset_index(drop=True), 4)
-    indices = {v: i for i, v in enumerate(sorted(plot_dd['val_accs'].unique()))}
-    plot_dd['val_accs_idx'] = plot_dd['val_accs'].map(indices).astype(int)
+    plot_dd[target_name] = pd.qcut(transform_y.reset_index(drop=True), 4)
+    indices = {v: i for i, v in enumerate(sorted(plot_dd[target_name].unique()))}
+    plot_dd[f'{target_name}_idx'] = plot_dd[target_name].map(indices).astype(int)
 
     importances = (pca.components_.T * np.sqrt(pca.explained_variance_)).T if compute_loadings else pca.components_
     pca_importances = pd.DataFrame(data=importances, columns=fit_data.columns)
     return plot_dd, pca_importances
 
 
-def _plot_pca(pca_data, title, save):
+def _plot_pca(pca_data, title, save, target_name):
     pca_features, pca_loadings = pca_data
 
     sns.set()
 
     plt.figure(figsize=(10, 8))
-    ax = sns.scatterplot(data=pca_features, x=0, y=1, hue='val_accs_idx', size='val_accs_idx', legend='full')
+    ax = sns.scatterplot(data=pca_features, x=0, y=1, hue=f'{target_name}_idx', size=f'{target_name}_idx', legend='full')
     legend = ax.get_legend()
     legend.set_title('quantile')
-    idxs = list(sorted(pca_features['val_accs'].unique()))
+    idxs = list(sorted(pca_features[target_name].unique()))
     for t in legend.texts:
         t.set_text(idxs[int(t._text)])
 
@@ -81,8 +82,8 @@ def log_to_csv(out, out_prefix, timestamp, config_args, pca_data, pca_train_data
     _, pca_train_df = pca_train_data
 
     if plot:
-        _plot_pca(pca_data, 'Full fit', os.path.join(out_name, 'full_pca.png'))
-        _plot_pca(pca_train_data, 'Train data fit', os.path.join(out_name, 'train_pca.png'))
+        _plot_pca(pca_data, 'Full fit', os.path.join(out_name, 'full_pca.png'), config_args['target_key'])
+        _plot_pca(pca_train_data, 'Train data fit', os.path.join(out_name, 'train_pca.png'), config_args['target_key'])
 
     log_csv(pca_df, 'pca')
     log_csv(pca_train_df, 'pca_train')
@@ -103,6 +104,8 @@ def run_pca(args):
                                             use_flops_params=args['use_flops_params'],
                                             zero_unreachable=args['zero_unreachables'],
                                             keep_uniques=args['keep_uniques'],
+                                            target_csv=args['target_csv_'],
+                                            target_key=args['target_key'],
                                             cache_path=cache_path,
                                             version_key=args['version_key'])
 
@@ -110,7 +113,8 @@ def run_pca(args):
     data_splits = get_data_splits(dataset, y, random_state=args['data_seed'], train_size=args['train_size'])
 
     n_components, loadings, standardize = args['n_components'], args['pca_loadings'], args['standardize']
-    pca_data = do_pca(dataset, dataset, y, n_components, compute_loadings=loadings, standardize=standardize)
+    pca_data = do_pca(dataset, dataset, y, n_components, compute_loadings=loadings, standardize=standardize,
+                      target_name=args['target_key'])
     pca_train_data = do_pca(data_splits["train_X"], dataset, y, n_components, compute_loadings=loadings,
                             standardize=standardize)
     log_to_csv(args['out_'], args['out_prefix'], get_timestamp(), cfg_args, pca_data, pca_train_data, args['plot_'])

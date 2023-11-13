@@ -63,6 +63,8 @@ def train_and_eval(args):
                                             use_flops_params=args['use_flops_params'],
                                             zero_unreachable=args['zero_unreachables'],
                                             keep_uniques=args['keep_uniques'],
+                                            target_csv=args['target_csv_'],
+                                            target_key=args['target_key'],
                                             cache_path=cache_path,
                                             version_key=args['version_key'])
 
