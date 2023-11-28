@@ -82,7 +82,8 @@ bench_names = {
     'nb101': 'zc_nasbench101',
     'nb201': 'zc_nasbench201',
     'nb301': 'zc_nasbench301',
-    'tnb101': 'zc_transbench101_micro'
+    'tnb101': 'zc_transbench101_micro',
+    'tnb101_macro': 'zc_transbench101_macro'
 }
 
 
