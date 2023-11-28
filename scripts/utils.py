@@ -125,7 +125,7 @@ def load_bench_data(searchspace_path, benchmark, dataset, filter_nets=None, zero
     dfs = parse_scores(search_space)
     data = dfs[dataset]
 
-    tnb = 'trans' in benchmark
+    tnb = 'trans' in benchmark and 'macro' not in benchmark
     if tnb or '201' in benchmark:
         data = keep_unique_nets(data, tnb=tnb, filter_nets=filter_nets, zero_unreachable=zero_unreachable)
 

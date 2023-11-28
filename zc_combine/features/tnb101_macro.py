@@ -9,7 +9,7 @@ def count_switches(net):
             op_counts[get_key(channel, stride)] = 0
 
     for op in net:
-        op_counts[get_key(op['channel', op['stride']])] += 1
+        op_counts[get_key(op['channel'], op['stride'])] += 1
 
     return op_counts
 

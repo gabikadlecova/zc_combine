@@ -7,6 +7,7 @@ from naslib.search_spaces.nasbench201.encodings import encode_adjacency_one_hot_
 from naslib.search_spaces.nasbench301.conversions import convert_compact_to_genotype
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
 from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_micro_op_indices
+from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_macro_op_indices
 
 from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301, \
     get_ops_nb101, parse_ops_nb101
@@ -102,6 +103,23 @@ def nb301_to_graph(n, net_key="net"):
     return darts_to_graph(genotype.normal), darts_to_graph(genotype.reduce)
 
 
+def tnb101_macro_encode(net, net_key='net'):
+    if not isinstance(net, str):
+        net = net[net_key]
+
+    res = []
+    net = net.strip('()').split(',')
+
+    for idx in net:
+        encoding = {}
+        idx = int(idx)
+        encoding['channel'] = idx % 2 == 0
+        encoding['stride'] = idx > 2
+        res.append(encoding)
+
+    return res
+
+
 def encode_to_onehot(net, benchmark):
     return onehot_conversions[benchmark](net)
 
@@ -128,7 +146,8 @@ bench_conversions = {
     'zc_nasbench101': nb101_to_graph,
     'zc_nasbench201': nb201_to_graph,
     'zc_nasbench301': nb301_to_graph,
-    'zc_transbench101_micro': tnb101_to_graph
+    'zc_transbench101_micro': tnb101_to_graph,
+    'zc_transbench101_macro': tnb101_macro_encode
 }
 
 
@@ -136,5 +155,6 @@ onehot_conversions = {
     'zc_nasbench101': nb101_to_onehot,
     'zc_nasbench201': encode_adjacency_one_hot_op_indices,
     'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_adj,
-    'zc_transbench101_micro': encode_adjacency_one_hot_transbench_micro_op_indices
+    'zc_transbench101_micro': encode_adjacency_one_hot_transbench_micro_op_indices,
+    'zc_transbench101_macro': encode_adjacency_one_hot_transbench_macro_op_indices
 }
