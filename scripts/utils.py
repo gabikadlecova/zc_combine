@@ -289,11 +289,12 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
 
     res['r2'] = r2_score(true, preds)
     res['mse'] = mean_squared_error(true, preds)
-    res['tau'] = kendalltau(preds, true)[0]
     if len(preds.shape) == 2:
         res['corr'] = np.mean([spearmanr(preds[:,0], true.iloc[:,0])[0], spearmanr(preds[:,1], true.iloc[:,1])[0]])
+        res['tau'] = np.mean([kendalltau(preds[:,0], true.iloc[:,0])[0], kendalltau(preds[:,1], true.iloc[:,1])[0]])
     else:
         res['corr'] = spearmanr(preds, true)[0]
+        res['tau'] = kendalltau(preds, true)[0]
     return res
 
 
