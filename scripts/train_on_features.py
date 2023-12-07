@@ -136,21 +136,23 @@ if __name__ == "__main__":
     parser_add_dataset_defaults(parser)
 
     parser.add_argument('--out_', type=str, help="Directory for output saving (subdir with timestamp will"
-                        " be created).")
+                                                 " be created).")
     parser.add_argument('--out_prefix', default=None, type=str, help="Prefix of the subdirectory.")
-    parser.add_argument('--columns_json_', default=None, type=str, help="Json list of columns to use (e.g. based on feat imps).")
+    parser.add_argument('--columns_json_', default=None, type=str,
+                        help="Json list of columns to use (e.g. based on feat imps).")
     parser.add_argument('--wandb_key_', default=None, type=str, help="If provided, data is logged to wandb instead.")
     parser.add_argument('--wandb_project_', default=None, type=str, help="Wandb project name (used only if "
                                                                          "--wandb_key_ is provided).")
     parser.add_argument('--n_evals', default=1, type=int, help="Number of models fitted and evaluated on the data "
-                                                                "(with random state seed + i).")
+                                                               "(with random state seed + i).")
     parser.add_argument('--seed', default=42, type=int, help="Starting model seed.")
     parser.add_argument('--model', default='rf', type=str, help="Model to use (rf, xgb, xgb_tuned).")
     parser.add_argument('--n_train_samples', default=1, type=int, help="Number of times a train set is sampled from the"
                                                                        " dataset (with random state data_seed + i)")
     parser.add_argument('--restart_id_', default=None, type=str, help="Id of the run to restart.")
-    parser.add_argument('--restart_data_seed_', default=42, type=int, help="Seed (absolute) for restart, will skip seeds "
-                        "smaller than this value. Runs for all seeds between [restart_data_seed, data_seed + n_train_samples)")
+    parser.add_argument('--restart_data_seed_', default=42, type=int,
+                        help="Seed (absolute) for restart, will skip seeds "
+                             "smaller than this value. Runs for all seeds between [restart_data_seed, data_seed + n_train_samples)")
     parser_add_flag(parser, 'log_featimp_', 'no_log_featimp', False, help_neg="If True, log feature importances.")
 
     args = parse_and_read_args(parser)
