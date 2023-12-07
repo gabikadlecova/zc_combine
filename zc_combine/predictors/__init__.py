@@ -13,6 +13,5 @@ predictor_cls = {
     'rf': lambda seed, **kwargs: RandomForestRegressor(random_state=seed, **kwargs),
     'xgb': lambda seed, **kwargs: XGBRegressor(random_state=seed, **kwargs),
     'xgb_tuned': lambda seed: XGBRegressor(random_state=seed, **xgb_args),
-    'mlp': lambda seed: MLPRegressor([50, 100, 50], random_state=seed,
-                                     learning_rate_init=0.01, max_iter=1000)
+    'mlp': lambda seed: MLPRegressor([90, 180, 180], learning_rate_init=0.01, max_iter=1000)
 }
