@@ -57,7 +57,7 @@ def parser_add_dataset_defaults(parser):
     parser.add_argument('--train_size', default=100, type=int, help="Train split size.")
     parser.add_argument('--proxy', default=None, type=str, help="Comma separated list of proxies to use.")
     parser.add_argument('--features', default=None, type=str, help="Comma separated list of features to use.")
-    parser.add_argument('--cfg', default=None, type=str, help="Path to config file for proxy dataset creation. Example configs are `zc_combine/configs/*.json`.")
+    parser.add_argument('--cfg', default='../zc_combine/configs/nb201_full.json', type=str, help="Path to config file for proxy dataset creation. Example configs are `zc_combine/configs/*.json`.")
     parser.add_argument('--meta', default=None, type=str, help="Path to the json file with unique nets filtered out (for nb201 and tnb101).")
     parser.add_argument('--target_csv_', default=None, type=str, help="Optional dataframe with user defined targets.")
     parser.add_argument('--target_key', default='val_accs', type=str, help="Name of the target to be predicted.")
@@ -69,6 +69,10 @@ def parser_add_dataset_defaults(parser):
                     help_pos="Add flops, params regardless of other proxy settings")
     parser_add_flag(parser, 'use_onehot', 'no_onehot', False,
                     help_neg="Add one hot and adjacency matrix encoding.")
+    parser_add_flag(parser, 'use_embedding', 'no_embedding', False,
+                    help_neg="Add precalculated arch2vec latent space embedding.")
+    parser_add_flag(parser, 'use_wl_embedding', 'no_wl_embedding', False,
+                    help_neg="Add precalculated arch2vec latent space embedding.")
     parser_add_flag(parser, 'zero_unreachables', 'no_zero_unreachables', True,
                     help_pos="Zero out unreachable ops, keep only the default (networks that are the same before and "
                              "after the zeroing).", help_neg="Keep all networks with unreachable ops.")

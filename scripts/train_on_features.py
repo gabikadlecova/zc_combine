@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args
-from utils import load_feature_proxy_dataset, get_data_splits, eval_model, get_timestamp, create_cache_filename
+from utils import load_feature_proxy_dataset, get_data_splits, eval_model, get_timestamp, create_cache_filename, get_wl_embedding
 from zc_combine.predictors import predictor_cls
 
 
@@ -55,13 +55,13 @@ def train_and_eval(args):
     cache_path = None
     if args['use_features'] and args['cache_dir_'] is not None:
         cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'])
-
     dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
                                             cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
                                             meta=args['meta'], use_features=args['use_features'],
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
                                             use_onehot=args['use_onehot'],
+                                            use_embedding=args['use_embedding'], 
                                             zero_unreachable=args['zero_unreachables'],
                                             keep_uniques=args['keep_uniques'],
                                             target_csv=args['target_csv_'],
@@ -79,6 +79,17 @@ def train_and_eval(args):
     # train test split, access splits - res['train_X'], res['test_y'],...
     data_splits = get_data_splits(dataset, y, random_state=args['data_seed'], train_size=args['train_size'])
 
+    ##### use train data to fit WL Kernel here 
+    if args['use_wl_embedding']:
+            data_splits = get_wl_embedding(data_splits, args['benchmark'])
+
+    # remove net here again, which was included for WL initialization...
+    if 'new_net' in data_splits['train_X'].columns:
+        data_splits['train_X'].drop(columns='new_net', inplace=True)
+    if 'new_net' in data_splits['test_X'].columns:
+        data_splits['test_X'].drop(columns='new_net', inplace=True)
+
+    
     # To convert data['net'] to str: (4, 0, 3, 1, 4, 3)
 
     # from naslib.search_spaces.nasbench201.conversions import convert_op_indices_to_str

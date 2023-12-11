@@ -8,18 +8,21 @@ import time
 from scipy.stats import kendalltau, spearmanr
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
+import torch
 
 from datetime import datetime
 from zc_combine.features import feature_dicts
-from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions, onehot_conversions
+from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions, onehot_conversions, embedding_conversions, wl_feature_conversions
 from zc_combine.features.dataset import get_feature_dataset
 from zc_combine.fixes.operations import get_ops_edges_nb201, get_ops_edges_tnb101
 from zc_combine.fixes.utils import nb201_zero_out_unreachable
 from zc_combine.utils.naslib_utils import load_search_space, parse_scores
 
+from zc_combine.kernels.weisfilerlehman import WeisfilerLehman
+
 
 def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, features=None, proxy=None, meta=None,
-                               use_features=True, use_all_proxies=False, use_flops_params=True, use_onehot=False,
+                               use_features=True, use_all_proxies=False, use_flops_params=True, use_onehot=False, use_embedding=False,
                                zero_unreachable=True, keep_uniques=True, target_csv=None, target_key='val_accs',
                                cache_path=None, version_key=None):
     """
@@ -71,10 +74,9 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     else:
         target_df = pd.read_csv(target_csv)
         y = get_target(target_df, data['net'], target_key=target_key)
-
     data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
-                       use_onehot=use_onehot, cache_path=cache_path, version_key=version_key)
+                       use_onehot=use_onehot, use_embedding=use_embedding, cache_path=cache_path, version_key=version_key)
     return data, y
 
 
@@ -164,7 +166,7 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
 
 
 def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True,
-                use_all_proxies=False, use_onehot=False, use_flops_params=True, cache_path=None, version_key=None):
+                use_all_proxies=False, use_onehot=False, use_embedding=False, use_flops_params=True, cache_path=None, version_key=None):
     feature_dataset = []
     # compute or load network features
     if use_features:
@@ -183,12 +185,16 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
     if use_onehot:
         onehot.append(get_onehot_encoding(data, benchmark))
 
-    # get data and y
-    res_data = pd.concat([*feature_dataset, proxy_df, *onehot], axis=1)
+    embedding_features = []
+    if use_embedding:
+        embedding_features.append(get_wl_embedding(data, benchmark))
+        
+    # get data and y 
+    # Add net string back here for WL kernel calculation
+    res_data = pd.concat([*feature_dataset, proxy_df, *onehot, data['new_net']], axis=1)
     res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
     if 'val_accs' in res_data.columns:
         res_data.drop(columns='val_accs', inplace=True)
-
     return res_data
 
 
@@ -199,6 +205,54 @@ def get_target(target_data, net_tuples, target_key='val_accs', net_key='net'):
 
     return target_data[target_key]
 
+
+def get_embedding(data, benchmark, embedding_path='../cache_data/'):    
+    # cache_embedding_path = os.path.join(str(embedding_path), str(benchmark)+"_arch2vec.pickle")
+    # print(cache_embedding_path)
+    # if not os.path.exists(cache_embedding_path):
+    print('create embedding data')
+    embedding_data = torch.load('../data/arch2vec/'+str(benchmark)+'_embeddings.pt')
+    embedding_convert = embedding_conversions[get_bench_key(benchmark)]
+    embeddings = {i: embedding_convert(eval(data.loc[i]['net']), embedding_data) for i in data.index}
+    embeddings = pd.DataFrame(embeddings.values(), index=embeddings.keys())
+    embeddings.columns = [f"embeddings_{c}" for c in embeddings.columns]
+        # embeddings.to_pickle(cache_embedding_path)
+    # else: 
+        # print('load embedding data')
+        # embeddings = pd.read_pickle(cache_embedding_path)  
+    return embeddings
+
+
+def get_wl_embedding(data, benchmark):
+    train_data = data['train_X']
+    test_data = data['test_X']
+
+    wl_feature_convert = wl_feature_conversions[get_bench_key(benchmark)]
+
+    list_nx_graphs = [wl_feature_convert(eval(train_data.iloc[i]['new_net'])) for i in range(len(train_data))]
+    kernel = WeisfilerLehman(oa=False, h=1, requires_grad=True)
+    kernel.fit_transform(list_nx_graphs)
+
+    
+    feat_list = kernel.feature_value(list_nx_graphs)[0].tolist()
+    wl_features = {i: feat_list[i] for i in range(len(train_data))}
+    wl_features = pd.DataFrame(wl_features.values(), index=wl_features.keys())
+    wl_features.columns = [f"wl_feat_{c}" for c in wl_features.columns]
+    data['train_X'] = pd.concat([data['train_X'], pd.DataFrame(columns = wl_features.columns)], axis=1)
+    data['train_X'][wl_features.columns] = wl_features.values
+
+    list_nx_graphs_test = [wl_feature_convert(eval(test_data.iloc[i]['new_net'])) for i in range(len(test_data))]
+
+    feat_list_test = kernel.feature_value(list_nx_graphs_test)[0].tolist()
+
+    wl_features_test = {i: feat_list_test[i] for i in  range(len(test_data))}
+    wl_features_test = pd.DataFrame(wl_features_test.values(), index=wl_features_test.keys())
+    wl_features_test.columns = [f"wl_feat_{c}" for c in wl_features_test.columns]
+
+    data['test_X'] = pd.concat([data['test_X'], pd.DataFrame(columns = wl_features_test.columns)], axis=1)
+    data['test_X'][wl_features_test.columns] = wl_features_test.values
+
+    return data
 
 def get_onehot_encoding(data, benchmark, net_key='net'):
     onehot_convert = onehot_conversions[get_bench_key(benchmark)]
