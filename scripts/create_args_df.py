@@ -7,6 +7,9 @@ import pandas as pd
 
 
 def parse_const(val):
+    if isinstance(val, int):
+        return val
+
     # range, e.g. 1-10 (upper exclusive)
     if '-' in val:
         splitted = val.split('-')
