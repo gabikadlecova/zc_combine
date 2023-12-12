@@ -12,11 +12,11 @@ def read_new_score(data, new_data, proxy, copy_old_column=False, pad_val=0):
         data.loc[mask, f'new_{proxy}'] = net_data[proxy]['score']
 
 
-def aggregate_isomorphic_scores(data, proxy_cols, agg_func=np.median, val_accs_std=3, score_std=3):
+def aggregate_isomorphic_scores(data, proxy_cols, agg_func=np.median, val_accs_std=3, score_std=3, net_key='new_net'):
     unique_data = []
 
-    for net in data['new_net'].unique():
-        nets = data[data['new_net'] == net]
+    for net in data[net_key].unique():
+        nets = data[data[net_key] == net]
         val_accs = nets['val_accs']
 
         agg = {s: agg_func(nets[s]) for s in proxy_cols}
