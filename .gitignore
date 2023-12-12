@@ -5,6 +5,7 @@ __pycache__/
 
 plots_zcs
 *out/
+results/data/*.csv
 
 wandb/
 cache_data/
