@@ -2,7 +2,7 @@ import naslib
 import networkx as nx
 import numpy as np
 from naslib.search_spaces.nasbench101.conversions import convert_tuple_to_spec
-from naslib.search_spaces.nasbench201.encodings import encode_adjacency_one_hot_op_indices
+from naslib.search_spaces.nasbench201.encodings import encode_adjacency_one_hot_op_indices, encode_paths
 
 from naslib.search_spaces.nasbench301.conversions import convert_compact_to_genotype
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
@@ -124,14 +124,21 @@ def encode_to_onehot(net, benchmark):
     return onehot_conversions[benchmark](net)
 
 
-def nb101_to_onehot(net):
-    net = convert_tuple_to_spec(net)
+def pad_nb101_net(net):
     matrix_dim = len(net['matrix'])
     if matrix_dim < 7:
         padval = 7 - matrix_dim
         net['matrix'] = np.pad(net['matrix'], [(0, padval), (0, padval)])
         for _ in range(padval):
             net['ops'].insert(-1, 'maxpool3x3')
+
+    return net
+
+
+def nb101_to_onehot(net):
+    net = convert_tuple_to_spec(net)
+    matrix_dim = len(net['matrix'])
+    net = pad_nb101_net(net)
 
     enc = naslib.search_spaces.nasbench101.encodings.encode_adj(net)
     if matrix_dim < 7:
@@ -140,6 +147,56 @@ def nb101_to_onehot(net):
                 idx = 3 * i + oid
                 enc[-1 - idx] = 0
     return enc
+
+
+def nb101_to_paths(net):
+    net = convert_tuple_to_spec(net)
+    net = pad_nb101_net(net)
+    return naslib.search_spaces.nasbench101.encodings.encode_paths(net)
+
+
+def get_paths(arch):
+    """
+    return all paths from input to output
+    """
+    path_blueprints = [[3], [0, 4], [1, 5], [0, 2, 5]]
+    paths = []
+    for blueprint in path_blueprints:
+        paths.append([arch[node] for node in blueprint])
+    return paths
+
+
+def get_path_indices(arch, num_ops=5):
+    """
+    compute the index of each path
+    """
+    paths = get_paths(arch)
+    path_indices = []
+
+    for i, path in enumerate(paths):
+        if i == 0:
+            index = 0
+        elif i in [1, 2]:
+            index = num_ops
+        else:
+            index = num_ops + num_ops ** 2
+        for j, op in enumerate(path):
+            index += op * num_ops ** j
+        path_indices.append(index)
+
+    return tuple(path_indices)
+
+
+def nb201_to_paths(net, num_ops=5, longest_path_length=3):
+    # FROM NASLIB #
+    num_paths = sum([num_ops ** i for i in range(1, longest_path_length + 1)])
+
+    path_indices = get_path_indices(net, num_ops=num_ops)
+
+    encoding = np.zeros(num_paths)
+    for index in path_indices:
+        encoding[index] = 1
+    return encoding
 
 
 bench_conversions = {
@@ -157,4 +214,11 @@ onehot_conversions = {
     'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_adj,
     'zc_transbench101_micro': encode_adjacency_one_hot_transbench_micro_op_indices,
     'zc_transbench101_macro': encode_adjacency_one_hot_transbench_macro_op_indices
+}
+
+
+path_conversions = {
+    'zc_nasbench101': nb101_to_paths,
+    'zc_nasbench201': nb201_to_paths,
+    'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_paths
 }

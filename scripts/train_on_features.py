@@ -69,6 +69,7 @@ def train_and_eval(args):
                                             use_all_proxies=args['use_all_proxies'],
                                             use_flops_params=args['use_flops_params'],
                                             use_onehot=args['use_onehot'],
+                                            use_path_encoding=args['use_path_encoding'],
                                             zero_unreachable=args['zero_unreachables'],
                                             keep_uniques=args['keep_uniques'],
                                             target_csv=args['target_csv_'],

@@ -69,6 +69,8 @@ def parser_add_dataset_defaults(parser):
                     help_pos="Add flops, params regardless of other proxy settings")
     parser_add_flag(parser, 'use_onehot', 'no_onehot', False,
                     help_neg="Add one hot and adjacency matrix encoding.")
+    parser_add_flag(parser, 'use_path_encoding', 'no_path_encoding', False,
+                    help_neg="Add path encoding (not available for both TNB101 micro and macro).")
     parser_add_flag(parser, 'zero_unreachables', 'no_zero_unreachables', True,
                     help_pos="Zero out unreachable ops, keep only the default (networks that are the same before and "
                              "after the zeroing).", help_neg="Keep all networks with unreachable ops.")
