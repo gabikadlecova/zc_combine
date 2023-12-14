@@ -1,0 +1,17 @@
+{
+  "data_seed": 42,
+  "n_train_samples": 50,
+  "train_size": [32, 128, 1024],
+  "cfg": ["../zc_combine/configs/nb201_full.json"],
+  "_raw_settings": ["--out_ train"],
+  "_raw_columns": [
+    "--use_all_proxies --use_onehot", "--use_onehot", "--use_onehot --no_features --no_flops_params",
+    "--use_onehot --no_features", "--use_onehot --no_features --use_all_proxies",
+    "--use_onehot --no_flops_params", "--no_flops_params", "--use_all_proxies",
+    "--use_all_proxies --no_features", ""
+  ],
+  "_raw_path": ["--use_path_encoding"],
+  "model": ["rf"],
+  "dataset": ["cifar10", "cifar100", "ImageNet16-120"],
+  "wandb_project_": "res_nb201"
+}
