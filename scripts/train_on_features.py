@@ -84,10 +84,10 @@ def train_and_eval(args):
             data_splits = get_wl_embedding(data_splits, args['benchmark'])
 
     # remove net here again, which was included for WL initialization...
-    if 'new_net' in data_splits['train_X'].columns:
-        data_splits['train_X'].drop(columns='new_net', inplace=True)
-    if 'new_net' in data_splits['test_X'].columns:
-        data_splits['test_X'].drop(columns='new_net', inplace=True)
+    if 'net' in data_splits['train_X'].columns:
+        data_splits['train_X'].drop(columns='net', inplace=True)
+    if 'net' in data_splits['test_X'].columns:
+        data_splits['test_X'].drop(columns='net', inplace=True)
 
     
     # To convert data['net'] to str: (4, 0, 3, 1, 4, 3)

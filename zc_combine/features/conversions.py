@@ -8,7 +8,7 @@ from naslib.search_spaces.nasbench201.encodings import encode_adjacency_one_hot_
 from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices, convert_op_indices_to_str, convert_op_indices_to_op_list
 
 from naslib.search_spaces.nasbench301.conversions import convert_compact_to_genotype
-from naslib.search_spaces.nasbench301.encodings import encode_adj
+from naslib.search_spaces.nasbench301.encodings import encode_adj, encode_gcn
 
 from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_micro_op_indices
 from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_macro_op_indices
@@ -97,7 +97,6 @@ def darts_to_graph(genotype):
         edges[str(i), "c_{k}"] = op_map['out']
 
     return ops, edges
-
 
 def nb301_to_graph(n, net_key="net"):
     if not isinstance(n, str):
@@ -295,8 +294,6 @@ def _preprocess(X, y=None):
 
 def nb101_nx_graphs(net):
     net = convert_tuple_to_spec(net)
-    import pdb
-    pdb.set_trace()
     nx_Graph = nx.from_numpy_array(net['matrix'], create_using=nx.DiGraph)
     nx_Graph.graph_type = 'node_attr'
 
@@ -304,7 +301,7 @@ def nb101_nx_graphs(net):
         nx_Graph.nodes[i]['op_name'] = n
 
 
-    nx_Graph = _preprocess([nx_Graph])
+    # nx_Graph = _preprocess([nx_Graph])
     return nx_Graph
 
 def nb201_nx_graphs(net):
@@ -316,6 +313,24 @@ def nb201_nx_graphs(net):
         return nx_Graph 
     else:
         return nx_Graph[0]
+
+def nb301_nx_graphs(net):
+    op_map = ['in', *get_ops_nb301(), 'out']
+    op_map = {o: i for i, o in enumerate(op_map)}
+    ops = {i: o for o, i in op_map.items()}
+    dic = encode_gcn(net)
+    matrix = dic['adjacency']
+    ops_onehot = dic['operations'].nonzero()[1]
+    ops = [ops[i] for i in ops_onehot]
+
+    nx_Graph = nx.from_numpy_array(matrix, create_using=nx.DiGraph)
+    nx_Graph.graph_type = 'node_attr'
+
+    for i, n in enumerate(ops):
+        nx_Graph.nodes[i]['op_name'] = n
+
+    # nx_Graph = _preprocess([nx_Graph])
+    return nx_Graph
 
 bench_conversions = {
     'zc_nasbench101': nb101_to_graph,
@@ -342,5 +357,6 @@ embedding_conversions = {
 
 wl_feature_conversions = {
     'zc_nasbench101': nb101_nx_graphs, 
-    'zc_nasbench201': nb201_nx_graphs
+    'zc_nasbench201': nb201_nx_graphs, 
+    'zc_nasbench301': nb301_nx_graphs
 }

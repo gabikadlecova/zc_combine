@@ -191,7 +191,7 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
         
     # get data and y 
     # Add net string back here for WL kernel calculation
-    res_data = pd.concat([*feature_dataset, proxy_df, *onehot, data['new_net']], axis=1)
+    res_data = pd.concat([*feature_dataset, proxy_df, *onehot, data['net']], axis=1)
     res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
     if 'val_accs' in res_data.columns:
         res_data.drop(columns='val_accs', inplace=True)
@@ -223,13 +223,13 @@ def get_embedding(data, benchmark, embedding_path='../cache_data/'):
     return embeddings
 
 
-def get_wl_embedding(data, benchmark):
+def get_wl_embedding(data, benchmark, key='net'):
     train_data = data['train_X']
     test_data = data['test_X']
 
     wl_feature_convert = wl_feature_conversions[get_bench_key(benchmark)]
 
-    list_nx_graphs = [wl_feature_convert(eval(train_data.iloc[i]['new_net'])) for i in range(len(train_data))]
+    list_nx_graphs = [wl_feature_convert(eval(train_data.iloc[i][key])) for i in range(len(train_data))]
     kernel = WeisfilerLehman(oa=False, h=1, requires_grad=True)
     kernel.fit_transform(list_nx_graphs)
 
@@ -241,7 +241,7 @@ def get_wl_embedding(data, benchmark):
     data['train_X'] = pd.concat([data['train_X'], pd.DataFrame(columns = wl_features.columns)], axis=1)
     data['train_X'][wl_features.columns] = wl_features.values
 
-    list_nx_graphs_test = [wl_feature_convert(eval(test_data.iloc[i]['new_net'])) for i in range(len(test_data))]
+    list_nx_graphs_test = [wl_feature_convert(eval(test_data.iloc[i][key])) for i in range(len(test_data))]
 
     feat_list_test = kernel.feature_value(list_nx_graphs_test)[0].tolist()
 
