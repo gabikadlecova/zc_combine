@@ -307,12 +307,8 @@ def nb101_nx_graphs(net):
 def nb201_nx_graphs(net):
     string = convert_op_indices_to_op_list(net)
     nx_Graph = create_nasbench201_graph(string)
-    nx_Graph = _preprocess([nx_Graph])
-    if nx_Graph == []:
-        print(net)
-        return nx_Graph 
-    else:
-        return nx_Graph[0]
+    # nx_Graph = _preprocess([nx_Graph])
+    return nx_Graph 
 
 def nb301_nx_graphs(net):
     op_map = ['in', *get_ops_nb301(), 'out']
@@ -321,12 +317,12 @@ def nb301_nx_graphs(net):
     dic = encode_gcn(net)
     matrix = dic['adjacency']
     ops_onehot = dic['operations'].nonzero()[1]
-    ops = [ops[i] for i in ops_onehot]
+    # ops = [ops[i] for i in ops_onehot]
 
     nx_Graph = nx.from_numpy_array(matrix, create_using=nx.DiGraph)
     nx_Graph.graph_type = 'node_attr'
 
-    for i, n in enumerate(ops):
+    for i, n in enumerate(ops_onehot):
         nx_Graph.nodes[i]['op_name'] = n
 
     # nx_Graph = _preprocess([nx_Graph])
