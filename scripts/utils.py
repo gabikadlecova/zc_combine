@@ -201,8 +201,8 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
 
 def get_target(target_data, net_tuples, target_key='val_accs', net_key='net'):
     # select nets based to net_tuples
-    target_data = target_data.reset_index().set_index(net_key)
-    target_data = target_data.loc[net_tuples].reset_index().set_index('index').rename_axis(None)
+    target_data = target_data.reset_index(drop=True).set_index(net_key)
+    target_data = target_data.loc[net_tuples].reset_index().set_index(net_tuples.index).rename_axis(None)
 
     return target_data[target_key]
 

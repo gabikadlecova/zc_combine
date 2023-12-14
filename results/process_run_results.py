@@ -4,8 +4,10 @@ import click
 import pandas as pd
 import wandb
 
+from tqdm import tqdm
+
 DEFAULT_CFG_ARGS = ['cfg', 'dataset', 'data_seed', 'proxy', 'train_size', 'use_all_proxies', 'use_features',
-                    'use_flops_params', 'use_onehot']
+                    'use_flops_params', 'use_onehot', 'use_path_encoding']
 DEFAULT_HISTORY = ['tau', 'corr', 'fit_time', 'test_time', '_step']
 
 
@@ -30,7 +32,7 @@ def main(key, project, timeout, cfg_args, metric_keys, out_path, keep_all_histor
     runs = api.runs(project)  # example project: "USER_NAME" + "/" + project
 
     results_df = []
-    for run in runs:
+    for run in tqdm(runs):
         row = {}
         for ca in cfg_args:
             if ca not in run.config:
