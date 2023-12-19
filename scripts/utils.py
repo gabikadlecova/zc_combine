@@ -74,11 +74,13 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
         target_df = pd.read_csv(target_csv)
         y = get_target(target_df, data['net'], target_key=target_key)
 
+    net_enc = data['net']
+
     data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
                        use_onehot=use_onehot, use_path_encoding=use_path_encoding, cache_path=cache_path,
                        version_key=version_key)
-    return data, y
+    return net_enc, data, y
 
 
 bench_names = {
@@ -226,6 +228,34 @@ def get_path_encoding(data, benchmark, net_key='net'):
 
 def get_data_splits(data, y, **kwargs):
     tr_X, te_X, tr_y, te_y = train_test_split(data, y, **kwargs)
+    return {"train_X": tr_X, "test_X": te_X, "train_y": tr_y, "test_y": te_y}
+
+
+def _get_filtered_ta_gates(data, nets, ta_dataset):
+    dataset, y = [], []
+
+    ta_dataset = pd.read_csv(ta_dataset) if isinstance(ta_dataset, str) else ta_dataset
+
+    for i in ta_dataset.index:
+        data_row = data.loc[nets[ta_dataset.loc[i]['net']]]
+        accs = ta_dataset.loc[i]['val_accs']
+        dataset.append(data_row)
+        y.append(accs)
+
+    dataset = pd.DataFrame(dataset)
+    y = pd.Series(y)
+    return dataset, y
+
+
+def get_data_splits_ta_gates(data, y, nets=None, train=None, test=None, train_size=None, random_state=42):
+    nets = {nets.loc[i]: i for i in nets.index}
+
+    tr_X, tr_y = _get_filtered_ta_gates(data, nets, train)
+    te_X, te_y = _get_filtered_ta_gates(data, nets, test)
+
+    if train_size is not None:
+        tr_X, _, tr_y, _ = train_test_split(tr_X, tr_y, train_size=train_size, random_state=random_state)
+
     return {"train_X": tr_X, "test_X": te_X, "train_y": tr_y, "test_y": te_y}
 
 

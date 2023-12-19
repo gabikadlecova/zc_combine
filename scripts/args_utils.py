@@ -54,7 +54,7 @@ def parser_add_dataset_defaults(parser):
     parser.add_argument('--benchmark', default='nb201', help="Which NAS benchmark to use (e.g. nb201).")
     parser.add_argument('--dataset', default='cifar10', help="Which dataset from the benchmark to use (e.g. cifar10).")
     parser.add_argument('--data_seed', default=42, type=int, help="Seed for dataset splits.")
-    parser.add_argument('--train_size', default=100, type=int, help="Train split size.")
+    parser.add_argument('--train_size', default=100, type=float, help="Train split size.")
     parser.add_argument('--proxy', default=None, type=str, help="Comma separated list of proxies to use.")
     parser.add_argument('--features', default=None, type=str, help="Comma separated list of features to use.")
     parser.add_argument('--cfg', default=None, type=str, help="Path to config file for proxy dataset creation. Example configs are `zc_combine/configs/*.json`.")

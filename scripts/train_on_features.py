@@ -6,7 +6,8 @@ import pandas as pd
 import wandb
 
 from args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
-from utils import load_feature_proxy_dataset, get_data_splits, eval_model, get_timestamp, create_cache_filename
+from utils import load_feature_proxy_dataset, get_data_splits, eval_model, get_timestamp, create_cache_filename, \
+    get_data_splits_ta_gates
 from zc_combine.predictors import predictor_cls
 
 
@@ -63,19 +64,19 @@ def train_and_eval(args):
     if args['use_features'] and args['cache_dir_'] is not None:
         cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'])
 
-    dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
-                                            cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
-                                            meta=args['meta'], use_features=args['use_features'],
-                                            use_all_proxies=args['use_all_proxies'],
-                                            use_flops_params=args['use_flops_params'],
-                                            use_onehot=args['use_onehot'],
-                                            use_path_encoding=args['use_path_encoding'],
-                                            zero_unreachable=args['zero_unreachables'],
-                                            keep_uniques=args['keep_uniques'],
-                                            target_csv=args['target_csv_'],
-                                            target_key=args['target_key'],
-                                            cache_path=cache_path,
-                                            version_key=args['version_key'])
+    nets, dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
+                                                  cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
+                                                  meta=args['meta'], use_features=args['use_features'],
+                                                  use_all_proxies=args['use_all_proxies'],
+                                                  use_flops_params=args['use_flops_params'],
+                                                  use_onehot=args['use_onehot'],
+                                                  use_path_encoding=args['use_path_encoding'],
+                                                  zero_unreachable=args['zero_unreachables'],
+                                                  keep_uniques=args['keep_uniques'],
+                                                  target_csv=args['target_csv_'],
+                                                  target_key=args['target_key'],
+                                                  cache_path=cache_path,
+                                                  version_key=args['version_key'])
 
     # select subset of columns based on previously saved data
     if args['columns_json_'] is not None:
@@ -106,7 +107,13 @@ def train_and_eval(args):
             continue
 
         # train test split, access splits - res['train_X'], res['test_y'],...
-        data_splits = get_data_splits(dataset, y, random_state=curr_data_seed, train_size=args['train_size'])
+        if args['ta_gates_train'] is None:
+            data_splits = get_data_splits(dataset, y, random_state=curr_data_seed, train_size=args['train_size'])
+        else:
+            assert args['ta_gates_test'] is not None
+            data_splits = get_data_splits_ta_gates(dataset, y, nets=nets, train=args['ta_gates_train'],
+                                                   test=args['ta_gates_test'], train_size=args['train_size'],
+                                                   random_state=curr_data_seed)
 
         # fit model n_evals times with different seeds
         model_cls = predictor_cls[args['model']]
@@ -147,6 +154,8 @@ if __name__ == "__main__":
     parser.add_argument('--n_evals', default=1, type=int, help="Number of models fitted and evaluated on the data "
                                                                "(with random state seed + i).")
     parser.add_argument('--seed', default=42, type=int, help="Starting model seed.")
+    parser.add_argument('--ta_gates_train', default=None, type=str, help="Path to TA-GATES train networks (use for splits).")
+    parser.add_argument('--ta_gates_test', default=None, type=str, help="Path to TA-GATES test networks (use for splits).")
     parser.add_argument('--model', default='rf', type=str, help="Model to use (rf, xgb, xgb_tuned).")
     parser.add_argument('--n_train_samples', default=1, type=int, help="Number of times a train set is sampled from the"
                                                                        " dataset (with random state data_seed + i)")
