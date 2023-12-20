@@ -9,7 +9,6 @@ from scipy.stats import kendalltau, spearmanr
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 
-from datetime import datetime
 from zc_combine.features import feature_dicts
 from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions, onehot_conversions, \
     path_conversions
@@ -67,18 +66,15 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     features = features if features is None else features.split(',')
     proxy = proxy.split(',') if proxy is not None else []
 
-    # either use validation accuracy as the target, or a user-defined metric in a separate csv file
-    if target_csv is None:
-        y = data[target_key]
-    else:
-        target_df = pd.read_csv(target_csv)
-        y = get_target(target_df, data['net'], target_key=target_key)
+    y = get_accs_or_target(data, target_csv=target_csv, target_key=target_key)
+
+    nets = data['net']
 
     data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
                        use_onehot=use_onehot, use_path_encoding=use_path_encoding, cache_path=cache_path,
                        version_key=version_key)
-    return data, y
+    return nets, data, y
 
 
 bench_names = {
@@ -89,6 +85,15 @@ bench_names = {
     'tnb101_macro': 'zc_transbench101_macro'
 }
 
+
+def get_accs_or_target(data, target_csv=None, target_key=None):
+    # either use validation accuracy as the target, or a user-defined metric in a separate csv file
+    if target_csv is None:
+        y = data[target_key]
+    else:
+        target_df = pd.read_csv(target_csv)
+        y = get_target(target_df, data['net'], target_key=target_key)
+    return y
 
 def create_cache_filename(cache_dir, cfg_path, features, version_key):
     assert os.path.isdir(cache_dir)
@@ -291,7 +296,3 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
     res['tau'] = kendalltau(preds, true)[0]
     res['corr'] = spearmanr(preds, true)[0]
     return res
-
-
-def get_timestamp():
-    return datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S-%f")
