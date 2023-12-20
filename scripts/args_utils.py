@@ -77,6 +77,6 @@ def parser_add_dataset_defaults(parser):
     parser_add_flag(parser, 'keep_uniques', 'all_networks', True,
                     help_pos="Keep only unique networks - remove isomorphisms.",
                     help_neg="Keep all networks (including isomorphic networks).")
-    parser_add_flag(parser, 'compute_all', 'compute_selected', False,
+    parser_add_flag(parser, 'compute_all_', 'compute_selected', False,
                     help_neg="If True, compute all available features even if `features` is provided. The subset is "
                              "selected after computing all feature kinds. Can be useful when caching data.")
