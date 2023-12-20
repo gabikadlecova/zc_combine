@@ -14,7 +14,8 @@ def train_and_eval(args):
 
     cache_path = None
     if args['use_features'] and args['cache_dir_'] is not None:
-        cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'])
+        cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'],
+                                           args['compute_all_'])
 
     _, dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
                                                cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
@@ -28,7 +29,8 @@ def train_and_eval(args):
                                                target_csv=args['target_csv_'],
                                                target_key=args['target_key'],
                                                cache_path=cache_path,
-                                               version_key=args['version_key'])
+                                               version_key=args['version_key'],
+                                               compute_all=args['compute_all_'])
 
     # select subset of columns based on previously saved data
     if args['columns_json_'] is not None:

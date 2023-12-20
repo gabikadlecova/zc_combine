@@ -8,7 +8,7 @@ import wandb
 from tqdm import tqdm
 
 DEFAULT_CFG_ARGS = ['cfg', 'dataset', 'data_seed', 'proxy', 'train_size', 'use_all_proxies', 'use_features',
-                    'use_flops_params', 'use_onehot', 'use_path_encoding']
+                    'use_flops_params', 'use_onehot', 'use_path_encoding', 'features']
 DEFAULT_HISTORY = ['tau', 'corr', 'fit_time', 'test_time', '_step']
 
 
@@ -78,8 +78,9 @@ def main(key, project, timeout, cfg_args, metric_keys, out_path, nan_check_path,
     results_df = pd.DataFrame(results_df)
     results_df.to_csv(out_path)
 
-    with open(nan_check_path, 'wb') as f:
-        pickle.dump(incomplete_runs, f)
+    if nan_check_path is not None:
+        with open(nan_check_path, 'wb') as f:
+            pickle.dump(incomplete_runs, f)
 
 
 if __name__ == "__main__":

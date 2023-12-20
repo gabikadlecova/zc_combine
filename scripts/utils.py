@@ -95,12 +95,17 @@ def get_accs_or_target(data, target_csv=None, target_key=None):
         y = get_target(target_df, data['net'], target_key=target_key)
     return y
 
-def create_cache_filename(cache_dir, cfg_path, features, version_key):
+def create_cache_filename(cache_dir, cfg_path, features, version_key, compute_all):
     assert os.path.isdir(cache_dir)
 
     cfg_name = os.path.splitext(os.path.basename(cfg_path))[0]
-    features = '' if features is None else '_'.join(sorted(features.split(',')))
-    features = f'-{features}' if len(features) else features
+    # for compute all, all features are always computed and cached
+    if not compute_all:
+        features = '' if features is None else '_'.join(sorted(features.split(',')))
+        features = f'-{features}' if len(features) else features
+    else:
+        features = ''
+
     version_key = f'-{version_key}' if version_key is not None and len(version_key) else version_key
     return os.path.join(cache_dir, f'{cfg_name}{features}{version_key}.pickle')
 
@@ -147,7 +152,7 @@ def get_net_data(data, benchmark, net_str='net'):
     return {i: convert_func(data.loc[i], net_key=net_str) for i in data.index}
 
 
-def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None, version_key=None):
+def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None, version_key=None, compute_all=False):
     if cache_path is not None and os.path.exists(cache_path):
         # load from cache path, check if version keys are the same
         with open(cache_path, 'rb') as f:
@@ -158,7 +163,8 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
     else:
         # create features when no cache path
         assert cfg is not None, "Must provide config when using network features."
-        feature_dataset = get_feature_dataset(nets, cfg, feature_dicts[get_bench_key(benchmark)], subset=features)
+        subset = None if compute_all else features
+        feature_dataset = get_feature_dataset(nets, cfg, feature_dicts[get_bench_key(benchmark)], subset=subset)
 
     # save to cache path if features were just created
     if cache_path is not None and not os.path.exists(cache_path):
@@ -166,19 +172,23 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
         with open(cache_path, 'wb') as f:
             pickle.dump(save_data, f)
 
-    feature_dataset = [f for f in feature_dataset.values()]
+    if compute_all:
+        feature_dataset = [f for k, f in feature_dataset.items() if k in features]
+    else:
+        feature_dataset = [f for f in feature_dataset.values()]
 
     return feature_dataset
 
 
 def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True, use_all_proxies=False,
-                use_onehot=False, use_flops_params=True, use_path_encoding=False, cache_path=None, version_key=None):
+                use_onehot=False, use_flops_params=True, use_path_encoding=False, cache_path=None, version_key=None,
+                compute_all=False):
     feature_dataset = []
     # compute or load network features
     if use_features:
         nets = get_net_data(data, benchmark)
         feature_dataset = load_or_create_features(nets, cfg, benchmark, features=features, cache_path=cache_path,
-                                                  version_key=version_key)
+                                                  version_key=version_key, compute_all=compute_all)
 
     if use_all_proxies:
         proxy_cols = set(c for c in data.columns if c not in ['random', 'rank', 'new_net', 'net', 'val_accs'])
