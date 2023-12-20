@@ -21,7 +21,8 @@ from zc_combine.utils.naslib_utils import load_search_space, parse_scores
 def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, features=None, proxy=None, meta=None,
                                use_features=True, use_all_proxies=False, use_flops_params=True, use_onehot=False,
                                use_path_encoding=False, zero_unreachable=True, keep_uniques=True,
-                               target_csv=None, target_key='val_accs', cache_path=None, version_key=None):
+                               target_csv=None, target_key='val_accs', cache_path=None, version_key=None,
+                               compute_all=False):
     """
         Load feature and proxy datasets, feature dataset can be precomputed or will be loaded from the config.
         Validation accuracy will be returned as the target.
@@ -46,6 +47,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
         target_key: Target key to predict (and extract from the `target_csv`).
         cache_path: Path to either save the feature dataset, or to load from.
         version_key: Version key to check with loaded dataset, or for saving it.
+        compute_all: If True, compute all features even if `features` is None. Good for caching.
 
     Returns:
         dataset, y - feature and/or proxy dataset, validation accuracy
@@ -73,7 +75,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
                        use_onehot=use_onehot, use_path_encoding=use_path_encoding, cache_path=cache_path,
-                       version_key=version_key)
+                       version_key=version_key, compute_all=compute_all)
     return nets, data, y
 
 
