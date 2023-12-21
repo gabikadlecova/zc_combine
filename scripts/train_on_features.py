@@ -1,11 +1,10 @@
 import argparse
 import json
 import pandas as pd
-import wandb
 
-from args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
-from scripts.log import set_up_logging, log_to_wandb, log_to_csv
-from utils import load_feature_proxy_dataset, get_data_splits, eval_model, create_cache_filename
+from zc_combine.utils.args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
+from zc_combine.utils.log import set_up_logging, log_to_wandb, log_to_csv
+from zc_combine.utils.script_utils import load_feature_proxy_dataset, get_data_splits, eval_model, create_cache_filename
 from zc_combine.predictors import predictor_cls
 
 

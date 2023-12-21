@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from log import get_timestamp
-from utils import get_data_splits, load_feature_proxy_dataset, create_cache_filename
-from args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
+from zc_combine.utils.log import get_timestamp
+from zc_combine.utils.script_utils import get_data_splits, load_feature_proxy_dataset, create_cache_filename
+from zc_combine.utils.args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
 
 
 def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings=True, standardize=True,
