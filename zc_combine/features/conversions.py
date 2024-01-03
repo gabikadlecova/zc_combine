@@ -168,6 +168,7 @@ def nb101_arch2vec_embedding(net, embedding_data):
 
 
 # === For NASBench-201 ====
+# from NASBOWL https://github.com/xingchenwan/nasbowl/blob/master/bayesopt/generate_test_graphs.py
 def create_nasbench201_graph(op_node_labelling, edge_attr=False):
     assert len(op_node_labelling) == 6
     # the graph has 8 nodes (6 operation nodes + input + output)
@@ -272,6 +273,10 @@ def _preprocess(X, y=None):
         return tmp
     return tmp, y
 
+# end of NASBOWL code
+# (license available in `zc_combine.features.wl_kernel.LICENSE`)
+# =========================
+
 
 def nb101_nx_graphs(net):
     net = convert_tuple_to_spec(net)
@@ -322,6 +327,7 @@ def nb301_nx_graphs(net):
 
     # nx_Graph = _preprocess([nx_Graph])
     return nx_Graph
+
 
 def nb101_to_paths(net):
     net = convert_tuple_to_spec(net)
