@@ -4,7 +4,8 @@ import pandas as pd
 
 from zc_combine.utils.args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
 from zc_combine.utils.log import set_up_logging, log_to_wandb, log_to_csv
-from zc_combine.utils.script_utils import load_feature_proxy_dataset, get_data_splits, eval_model, create_cache_filename
+from zc_combine.utils.script_utils import load_feature_proxy_dataset, get_data_splits, eval_model, \
+    create_cache_filename, get_wl_embedding
 from zc_combine.predictors import predictor_cls
 
 
@@ -22,6 +23,7 @@ def train_and_eval(args):
                                                use_all_proxies=args['use_all_proxies'],
                                                use_flops_params=args['use_flops_params'],
                                                use_onehot=args['use_onehot'],
+                                               use_embedding=args['use_embedding'], 
                                                use_path_encoding=args['use_path_encoding'],
                                                zero_unreachable=args['zero_unreachables'],
                                                keep_uniques=args['keep_uniques'],
@@ -52,6 +54,16 @@ def train_and_eval(args):
 
         # train test split, access splits - res['train_X'], res['test_y'],...
         data_splits = get_data_splits(dataset, y, random_state=curr_data_seed, train_size=args['train_size'])
+        
+        ##### use train data to fit WL Kernel here
+        if args['use_wl_embedding']:
+            data_splits = get_wl_embedding(data_splits, args['benchmark'])
+
+        # remove net here again, which was included for WL initialization...
+        if 'net' in data_splits['train_X'].columns:
+            data_splits['train_X'].drop(columns='net', inplace=True)
+        if 'net' in data_splits['test_X'].columns:
+            data_splits['test_X'].drop(columns='net', inplace=True)
 
         # fit model n_evals times with different seeds
         model_cls = predictor_cls[args['model']]
