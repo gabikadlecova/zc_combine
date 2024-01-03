@@ -1,7 +1,0 @@
-{
-  "mode": "norm",
-  "_raw_features": [
-    "--threshold 0.001", "--threshold 0.01", "--threshold 0.1",
-    "--n_features 10", "--n_features 30", "--n_features 50"
-  ]
-}

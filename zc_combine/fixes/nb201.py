@@ -1,0 +1,62 @@
+import networkx as nx
+
+from zc_combine.features.conversions import to_graph
+
+
+def remove_zero_branches(edges, zero_op=1):
+    G = to_graph(edges)
+
+    okay_edges = set()
+
+    paths = nx.all_simple_paths(G, source=1, target=4)
+    for path in map(nx.utils.pairwise, paths):
+        path = [e for e in path]
+        if any([edges[k] == zero_op for k in path]):
+            continue
+
+        for e in path:
+            okay_edges.add(e)
+
+    new_edges = {e: val for e, val in edges.items() if e in okay_edges}
+
+    new_op_map = set([e[0] for e in new_edges.keys()] + [e[1] for e in new_edges.keys()])
+    new_op_map = {k: i for i, k in enumerate(sorted(list(new_op_map)))}
+    new_edges = {(new_op_map[e[0]], new_op_map[e[1]]): v for e, v in new_edges.items()}
+
+    return new_edges
+
+
+def _remap_node(node, new, old):
+    if node == old:
+        return new
+    return node
+
+
+def remove_redundant_skips(edges, skip_op=0):
+    G = to_graph(edges)
+
+    while True:
+        e_removed = False
+        e_keys = edges.keys()
+
+        for e in e_keys:
+            if edges[e] == skip_op and e in G.edges:
+                G.remove_edge(*e)
+                u, v = e
+                try:
+                    nx.shortest_path(G, source=u, target=v)
+                    # return edge if there is still some path after removing the skip - not reduntant
+                    G.add_edge(*e)
+                except nx.NetworkXNoPath:
+                    # can remove skip - redundant, contract nodes
+                    G = nx.contracted_nodes(G, u, v)
+                    edges.pop((u, v))
+                    edges = {(_remap_node(k[0], u, v), _remap_node(k[1], u, v)): val for k, val in edges.items()}
+                    e_removed = True
+                    break
+
+        if not e_removed:
+            break
+
+    return G, edges
+
