@@ -5,6 +5,13 @@ __pycache__/
 
 plots_zcs
 *out/
+results/data/*.csv
+
+wandb/
+cache_data/
+figs
+
+data/*.json
 
 experiment_settings.csv
 

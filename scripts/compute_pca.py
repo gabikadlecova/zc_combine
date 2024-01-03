@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from utils import get_data_splits, load_feature_proxy_dataset, get_timestamp, create_cache_filename
-from args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
+from zc_combine.utils.log import get_timestamp
+from zc_combine.utils.script_utils import get_data_splits, load_feature_proxy_dataset, create_cache_filename
+from zc_combine.utils.args_utils import parser_add_dataset_defaults, parser_add_flag, parse_and_read_args, log_dataset_args
 
 
 def do_pca(fit_data, transform_data, transform_y, n_components, compute_loadings=True, standardize=True,
@@ -97,18 +98,19 @@ def run_pca(args):
     if args['use_features'] and args['cache_dir_'] is not None:
         cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'])
 
-    dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
-                                            cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
-                                            meta=args['meta'], use_features=args['use_features'],
-                                            use_all_proxies=args['use_all_proxies'],
-                                            use_flops_params=args['use_flops_params'],
-                                            use_onehot=args['use_onehot'],
-                                            zero_unreachable=args['zero_unreachables'],
-                                            keep_uniques=args['keep_uniques'],
-                                            target_csv=args['target_csv_'],
-                                            target_key=args['target_key'],
-                                            cache_path=cache_path,
-                                            version_key=args['version_key'])
+    _, dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
+                                               cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
+                                               meta=args['meta'], use_features=args['use_features'],
+                                               use_all_proxies=args['use_all_proxies'],
+                                               use_flops_params=args['use_flops_params'],
+                                               use_onehot=args['use_onehot'],
+                                               use_path_encoding=args['use_path_encoding'],
+                                               zero_unreachable=args['zero_unreachables'],
+                                               keep_uniques=args['keep_uniques'],
+                                               target_csv=args['target_csv_'],
+                                               target_key=args['target_key'],
+                                               cache_path=cache_path,
+                                               version_key=args['version_key'])
 
     # train test split, access splits - res['train_X'], res['test_y'],...
     data_splits = get_data_splits(dataset, y, random_state=args['data_seed'], train_size=args['train_size'])
