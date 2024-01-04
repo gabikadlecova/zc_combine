@@ -1,4 +1,11 @@
-. "$1"/bin/activate
+#!/bin/bash
+
+#Make conda available
+eval "$(conda shell.bash hook)"
+# Activate a conda environment
+
+conda activate "$1"
+module load miniconda3
 
 if [ -n "$3" ]; then
   cache_dir="--cache_dir_ $3"
@@ -13,4 +20,3 @@ if [ -n "$row_id" ]; then
 fi
 
 python train_on_features.py --wandb_key_ "$2" $train_args --out_prefix train_"$SUFFIX" $cache_dir $version_key
-

@@ -236,19 +236,19 @@ def get_target(target_data, net_tuples, target_key='val_accs', net_key='net'):
 
 
 def get_embedding(data, benchmark, embedding_path='../data/arch2vec/'):
-    # cache_embedding_path = os.path.join(str(embedding_path), str(benchmark)+"_arch2vec.pickle")
-    # print(cache_embedding_path)
-    # if not os.path.exists(cache_embedding_path):
-    print('create embedding data')
-    embedding_data = torch.load(embedding_path + str(benchmark) + '_embeddings.pt')
-    embedding_convert = embedding_conversions[get_bench_key(benchmark)]
-    embeddings = {i: embedding_convert(eval(data.loc[i]['net']), embedding_data) for i in data.index}
-    embeddings = pd.DataFrame(embeddings.values(), index=embeddings.keys())
-    embeddings.columns = [f"embeddings_{c}" for c in embeddings.columns]
-        # embeddings.to_pickle(cache_embedding_path)
-    # else: 
-        # print('load embedding data')
-        # embeddings = pd.read_pickle(cache_embedding_path)  
+    cache_embedding_path = os.path.join(str(embedding_path), str(benchmark)+"_embeddings.csv")
+    if not os.path.exists(cache_embedding_path):
+        print('create embedding data')
+        embedding_data = torch.load(embedding_path + str(benchmark) + '_embeddings.pt')
+        embedding_convert = embedding_conversions[get_bench_key(benchmark)]
+        embeddings = {i: embedding_convert(eval(data.loc[i]['net']), embedding_data) for i in data.index}
+        embeddings = pd.DataFrame(embeddings.values(), index=embeddings.keys())
+        embeddings.columns = [f"embeddings_{c}" for c in embeddings.columns]
+        embeddings = pd.concat([data['net'], embeddings], axis=1)
+        embeddings.to_csv(cache_embedding_path)
+    else: 
+        print('load embedding data')
+        embeddings = pd.read_csv(cache_embedding_path, index_col=0)
     return embeddings
 
 
