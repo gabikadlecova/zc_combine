@@ -81,6 +81,6 @@ def parser_add_dataset_defaults(parser):
     parser_add_flag(parser, 'compute_all_', 'compute_selected', False,
                     help_neg="If True, compute all available features even if `features` is provided. The subset is "
                              "selected after computing all feature kinds. Can be useful when caching data.")
-    parser_add_flag(parser, 'multi_objective', 'single_objective', True,
+    parser_add_flag(parser, 'multi_objective', 'single_objective', False,
                     help_pos="Use the val accuracy and another objective of the architectures as multiple targets",
                     help_neg="Evaluate ONLY for the target_key args")
