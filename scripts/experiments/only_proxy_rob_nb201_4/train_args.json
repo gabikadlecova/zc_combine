@@ -1,0 +1,11 @@
+{
+  "data_seed": "42-47",
+  "train_size": [20, 100, 1000],
+  "_raw_settings": ["--out_ train --meta ../data/robustness-dataset/meta.json --robustness_evals --robustness_data_path ../data/robustness-dataset/"], 
+  "_raw_columns": ["--use_all_proxies --no_features --multi_objective",
+     "--use_all_proxies --no_features --single_objective"],
+  "model": ["rf"],
+  "attack": ["fgsm@Linf", "pgd@Linf", "aa_apgd-ce@Linf", "aa_square@Linf"],
+  "eps_attack": ["4.0"], 
+  "wandb_project_": "zc_combine_rob_4"
+}

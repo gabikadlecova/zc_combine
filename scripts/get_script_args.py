@@ -1,7 +1,6 @@
 import click
 import pandas as pd
 
-
 @click.command()
 @click.option('--input_file', help="Csv file with experiment settings - each columns is a variable with command line args.")
 @click.option('--id', type=int, help="Start row (passed to .iloc)")
@@ -14,14 +13,12 @@ def main(input_file, id, step):
     """
 
     df = pd.read_csv(input_file, index_col=0)
-
     while True:
         if id >= len(df):
             break
 
         row = df.iloc[id]
         assert str.isnumeric(str(row.name))
-
         res = [f"{k}=\'{v}\'" for k, v in row.iteritems()]
         res.append(f"row_id={row.name}")
 
