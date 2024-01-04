@@ -13,4 +13,3 @@ if [ -n "$row_id" ]; then
 fi
 
 python train_on_features.py --wandb_key_ "$2" $train_args --out_prefix train_"$SUFFIX" $cache_dir $version_key
-
