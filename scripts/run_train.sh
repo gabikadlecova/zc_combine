@@ -1,12 +1,5 @@
 #!/bin/bash
 
-#Make conda available
-eval "$(conda shell.bash hook)"
-# Activate a conda environment
-
-conda activate "$1"
-module load miniconda3
-
 if [ -n "$3" ]; then
   cache_dir="--cache_dir_ $3"
 fi
