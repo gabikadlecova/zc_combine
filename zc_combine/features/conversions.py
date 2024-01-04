@@ -193,86 +193,6 @@ def create_nasbench201_graph(op_node_labelling, edge_attr=False):
     G.name = arch_query_string
     return G
 
-
-def prune(original_matrix, ops):
-    """Prune the extraneous parts of the graph.
-
-    General procedure:
-      1) Remove parts of graph not connected to input.
-      2) Remove parts of graph not connected to output.
-      3) Reorder the vertices so that they are consecutive after steps 1 and 2.
-
-    These 3 steps can be combined by deleting the rows and columns of the
-    vertices that are not reachable from both the input and output (in reverse).
-    """
-    num_vertices = np.shape(original_matrix)[0]
-    new_matrix = copy.deepcopy(original_matrix)
-    new_ops = copy.deepcopy(ops)
-    # DFS forward from input
-    visited_from_input = {0}
-    frontier = [0]
-    while frontier:
-        top = frontier.pop()
-        for v in range(top + 1, num_vertices):
-            if original_matrix[top, v] and v not in visited_from_input:
-                visited_from_input.add(v)
-                frontier.append(v)
-
-    # DFS backward from output
-    visited_from_output = {num_vertices - 1}
-    frontier = [num_vertices - 1]
-    while frontier:
-        top = frontier.pop()
-        for v in range(0, top):
-            if original_matrix[v, top] and v not in visited_from_output:
-                visited_from_output.add(v)
-                frontier.append(v)
-
-    # Any vertex that isn't connected to both input and output is extraneous to
-    # the computation graph.
-    extraneous = set(range(num_vertices)).difference(
-        visited_from_input.intersection(visited_from_output))
-
-    # If the non-extraneous graph is less than 2 vertices, the input is not
-    # connected to the output and the spec is invalid.
-    if len(extraneous) > num_vertices - 2:
-        new_matrix = None
-        new_ops = None
-        valid_spec = False
-        return
-
-    new_matrix = np.delete(new_matrix, list(extraneous), axis=0)
-    new_matrix = np.delete(new_matrix, list(extraneous), axis=1)
-    for index in sorted(extraneous, reverse=True):
-        del new_ops[index]
-
-    return new_matrix, new_ops
-
-
-def _preprocess(X, y=None):
-    tmp = []
-    valid_indices = []
-    for idx, c in enumerate(X):
-        node_labeling = list(nx.get_node_attributes(c, 'op_name').values())
-        try:
-            res = prune(nx.to_numpy_array(c), node_labeling)
-            if res is None:
-                continue
-            c_new, label_new = res
-            c_nx = nx.from_numpy_array(c_new, create_using=nx.DiGraph)
-            for i, n in enumerate(label_new):
-                c_nx.nodes[i]['op_name'] = n
-        except KeyError:
-            print('Pruning error!')
-            c_nx = c
-        tmp.append(c_nx)
-        valid_indices.append(idx)
-    if y is not None: y = y[valid_indices]
-    if y is None:
-        return tmp
-    return tmp, y
-
-
 def nb101_nx_graphs(net):
     net = convert_tuple_to_spec(net)
     nx_Graph = nx.from_numpy_array(net['matrix'], create_using=nx.DiGraph)
@@ -281,7 +201,6 @@ def nb101_nx_graphs(net):
     for i, n in enumerate(net['ops']):
         nx_Graph.nodes[i]['op_name'] = n
 
-    # nx_Graph = _preprocess([nx_Graph])
     return nx_Graph
 
 
@@ -294,14 +213,12 @@ def _convert_op_indices_to_op_list(op_indices):
         "{}".format(edge_op_dict[(i, j)])
         for i, j in sorted(edge_op_dict, key=lambda x: x[1])
     ]
-
     return op_edge_list
 
 
 def nb201_nx_graphs(net):
     string = _convert_op_indices_to_op_list(net)
     nx_Graph = create_nasbench201_graph(string)
-    # nx_Graph = _preprocess([nx_Graph])
     return nx_Graph 
 
 
@@ -312,7 +229,6 @@ def nb301_nx_graphs(net):
     dic = encode_gcn(net)
     matrix = dic['adjacency']
     ops_onehot = dic['operations'].nonzero()[1]
-    # ops = [ops[i] for i in ops_onehot]
 
     nx_Graph = nx.from_numpy_array(matrix, create_using=nx.DiGraph)
     nx_Graph.graph_type = 'node_attr'
@@ -320,7 +236,6 @@ def nb301_nx_graphs(net):
     for i, n in enumerate(ops_onehot):
         nx_Graph.nodes[i]['op_name'] = n
 
-    # nx_Graph = _preprocess([nx_Graph])
     return nx_Graph
 
 def nb101_to_paths(net):
