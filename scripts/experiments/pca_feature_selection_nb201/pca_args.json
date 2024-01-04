@@ -1,9 +1,0 @@
-{
-  "cfg": ["../zc_combine/configs/nb201_first.json", "../zc_combine/configs/nb201_full.json"],
-  "_raw_pca": ["--pca_loadings --out_ pca --meta ../data/meta.json"],
-  "data_seed": "42-47",
-  "train_size": [20, 100, 1000],
-  "_raw_columns": ["--use_all_proxies", ""],
-  "_raw_standardize":  ["--standardize", ""],
-  "wandb_project_": "zc_nb201_pca"
-}

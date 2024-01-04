@@ -1,8 +1,19 @@
+import naslib
 import networkx as nx
 import numpy as np
+import copy
+from naslib.search_spaces.nasbench101.conversions import convert_tuple_to_spec
+
+from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices, convert_op_indices_to_str, \
+    OP_NAMES_NB201, EDGE_LIST
+from naslib.search_spaces.nasbench201.encodings import encode_adjacency_one_hot_op_indices
 
 from naslib.search_spaces.nasbench301.conversions import convert_compact_to_genotype
-from naslib.search_spaces.nasbench201.conversions import convert_str_to_op_indices
+from naslib.search_spaces.nasbench301.encodings import encode_adj, encode_gcn
+
+from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_micro_op_indices
+from naslib.search_spaces.transbench101.encodings import encode_adjacency_one_hot_transbench_macro_op_indices
+
 from zc_combine.fixes.operations import parse_ops_nb201, get_ops_edges_nb201, get_ops_edges_tnb101, get_ops_nb301, \
     get_ops_nb101, parse_ops_nb101
 
@@ -88,7 +99,6 @@ def darts_to_graph(genotype):
 
     return ops, edges
 
-
 def nb301_to_graph(n, net_key="net"):
     if not isinstance(n, str):
         n = n[net_key]
@@ -97,9 +107,312 @@ def nb301_to_graph(n, net_key="net"):
     return darts_to_graph(genotype.normal), darts_to_graph(genotype.reduce)
 
 
+def tnb101_macro_encode(net, net_key='net'):
+    if not isinstance(net, str):
+        net = net[net_key]
+
+    res = []
+    net = net.strip('()').split(',')
+
+    for idx in net:
+        encoding = {}
+        idx = int(idx)
+        encoding['channel'] = idx % 2 == 0
+        encoding['stride'] = idx > 2
+        res.append(encoding)
+
+    return res
+
+
+def encode_to_onehot(net, benchmark):
+    return onehot_conversions[benchmark](net)
+
+
+def pad_nb101_net(net):
+    matrix_dim = len(net['matrix'])
+    if matrix_dim < 7:
+        padval = 7 - matrix_dim
+        net['matrix'] = np.pad(net['matrix'], [(0, padval), (0, padval)])
+        for _ in range(padval):
+            net['ops'].insert(-1, 'maxpool3x3')
+
+    return net
+
+
+def nb101_to_onehot(net):
+    net = convert_tuple_to_spec(net)
+    matrix_dim = len(net['matrix'])
+    net = pad_nb101_net(net)
+
+    enc = naslib.search_spaces.nasbench101.encodings.encode_adj(net)
+    if matrix_dim < 7:
+        for i in range(0, 7 - matrix_dim):
+            for oid in range(3):
+                idx = 3 * i + oid
+                enc[-1 - idx] = 0
+    return enc
+
+def nb201_arch2vec_embedding(net, embedding_data):
+    string = convert_op_indices_to_str(net)
+    embedding_data_ops = [v['ops'] for v in embedding_data.values()]
+    keys = embedding_data[embedding_data_ops.index(string)]
+    embedding = keys['feature'].detach().tolist()
+    return embedding
+
+
+def nb101_arch2vec_embedding(net, embedding_data):
+    net = convert_tuple_to_spec(net)
+    keys = [k for k,v in embedding_data.items() if v['adj'][:len(v['ops']), :len(v['ops'])].flatten().tolist()==net['matrix'].flatten().tolist() and v['ops']==net['ops']]
+    embedding = embedding_data[keys[0]]['feature'].detach().tolist()
+    return embedding
+
+
+# === For NASBench-201 ====
+# from NASBOWL https://github.com/xingchenwan/nasbowl/blob/master/bayesopt/generate_test_graphs.py
+def create_nasbench201_graph(op_node_labelling, edge_attr=False):
+    assert len(op_node_labelling) == 6
+    # the graph has 8 nodes (6 operation nodes + input + output)
+    G = nx.DiGraph()
+    edge_list = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 6), (3, 6), (4, 7), (5, 7), (6, 7)]
+    G.add_edges_from(edge_list)
+
+    # assign node attributes and collate the information for nodes to be removed
+    # (i.e. nodes with 'skip_connect' or 'none' label)
+    node_labelling = ['input'] + op_node_labelling + ['output']
+    edges_to_add_list = []
+    for i, n in enumerate(node_labelling):
+        G.nodes[i]['op_name'] = n
+
+    # G.remove_nodes_from(nodes_to_be_further_removed)
+    G.graph_type = 'node_attr'
+
+    # create the arch string for querying nasbench dataset
+    arch_query_string = f'|{op_node_labelling[0]}~0|+' \
+                        f'|{op_node_labelling[1]}~0|{op_node_labelling[2]}~1|+' \
+                        f'|{op_node_labelling[3]}~0|{op_node_labelling[4]}~1|{op_node_labelling[5]}~2|'
+
+    G.name = arch_query_string
+    return G
+
+
+def prune(original_matrix, ops):
+    """Prune the extraneous parts of the graph.
+
+    General procedure:
+      1) Remove parts of graph not connected to input.
+      2) Remove parts of graph not connected to output.
+      3) Reorder the vertices so that they are consecutive after steps 1 and 2.
+
+    These 3 steps can be combined by deleting the rows and columns of the
+    vertices that are not reachable from both the input and output (in reverse).
+    """
+    num_vertices = np.shape(original_matrix)[0]
+    new_matrix = copy.deepcopy(original_matrix)
+    new_ops = copy.deepcopy(ops)
+    # DFS forward from input
+    visited_from_input = {0}
+    frontier = [0]
+    while frontier:
+        top = frontier.pop()
+        for v in range(top + 1, num_vertices):
+            if original_matrix[top, v] and v not in visited_from_input:
+                visited_from_input.add(v)
+                frontier.append(v)
+
+    # DFS backward from output
+    visited_from_output = {num_vertices - 1}
+    frontier = [num_vertices - 1]
+    while frontier:
+        top = frontier.pop()
+        for v in range(0, top):
+            if original_matrix[v, top] and v not in visited_from_output:
+                visited_from_output.add(v)
+                frontier.append(v)
+
+    # Any vertex that isn't connected to both input and output is extraneous to
+    # the computation graph.
+    extraneous = set(range(num_vertices)).difference(
+        visited_from_input.intersection(visited_from_output))
+
+    # If the non-extraneous graph is less than 2 vertices, the input is not
+    # connected to the output and the spec is invalid.
+    if len(extraneous) > num_vertices - 2:
+        new_matrix = None
+        new_ops = None
+        valid_spec = False
+        return
+
+    new_matrix = np.delete(new_matrix, list(extraneous), axis=0)
+    new_matrix = np.delete(new_matrix, list(extraneous), axis=1)
+    for index in sorted(extraneous, reverse=True):
+        del new_ops[index]
+
+    return new_matrix, new_ops
+
+
+def _preprocess(X, y=None):
+    tmp = []
+    valid_indices = []
+    for idx, c in enumerate(X):
+        node_labeling = list(nx.get_node_attributes(c, 'op_name').values())
+        try:
+            res = prune(nx.to_numpy_array(c), node_labeling)
+            if res is None:
+                continue
+            c_new, label_new = res
+            c_nx = nx.from_numpy_array(c_new, create_using=nx.DiGraph)
+            for i, n in enumerate(label_new):
+                c_nx.nodes[i]['op_name'] = n
+        except KeyError:
+            print('Pruning error!')
+            c_nx = c
+        tmp.append(c_nx)
+        valid_indices.append(idx)
+    if y is not None: y = y[valid_indices]
+    if y is None:
+        return tmp
+    return tmp, y
+
+# end of NASBOWL code
+# (license available in `zc_combine.features.wl_kernel.LICENSE`)
+# =========================
+
+
+def nb101_nx_graphs(net):
+    net = convert_tuple_to_spec(net)
+    nx_Graph = nx.from_numpy_array(net['matrix'], create_using=nx.DiGraph)
+    nx_Graph.graph_type = 'node_attr'
+
+    for i, n in enumerate(net['ops']):
+        nx_Graph.nodes[i]['op_name'] = n
+
+    # nx_Graph = _preprocess([nx_Graph])
+    return nx_Graph
+
+
+def _convert_op_indices_to_op_list(op_indices):
+    edge_op_dict = {
+        edge: OP_NAMES_NB201[op] for edge, op in zip(EDGE_LIST, op_indices)
+    }
+
+    op_edge_list = [
+        "{}".format(edge_op_dict[(i, j)])
+        for i, j in sorted(edge_op_dict, key=lambda x: x[1])
+    ]
+
+    return op_edge_list
+
+
+def nb201_nx_graphs(net):
+    string = _convert_op_indices_to_op_list(net)
+    nx_Graph = create_nasbench201_graph(string)
+    # nx_Graph = _preprocess([nx_Graph])
+    return nx_Graph 
+
+
+def nb301_nx_graphs(net):
+    op_map = ['in', *get_ops_nb301(), 'out']
+    op_map = {o: i for i, o in enumerate(op_map)}
+    ops = {i: o for o, i in op_map.items()}
+    dic = encode_gcn(net)
+    matrix = dic['adjacency']
+    ops_onehot = dic['operations'].nonzero()[1]
+    # ops = [ops[i] for i in ops_onehot]
+
+    nx_Graph = nx.from_numpy_array(matrix, create_using=nx.DiGraph)
+    nx_Graph.graph_type = 'node_attr'
+
+    for i, n in enumerate(ops_onehot):
+        nx_Graph.nodes[i]['op_name'] = n
+
+    # nx_Graph = _preprocess([nx_Graph])
+    return nx_Graph
+
+
+def nb101_to_paths(net):
+    net = convert_tuple_to_spec(net)
+    net = pad_nb101_net(net)
+    return naslib.search_spaces.nasbench101.encodings.encode_paths(net)
+
+
+def get_paths(arch):
+    """
+    return all paths from input to output
+    """
+    path_blueprints = [[3], [0, 4], [1, 5], [0, 2, 5]]
+    paths = []
+    for blueprint in path_blueprints:
+        paths.append([arch[node] for node in blueprint])
+    return paths
+
+
+def get_path_indices(arch, num_ops=5):
+    """
+    compute the index of each path
+    """
+    paths = get_paths(arch)
+    path_indices = []
+
+    for i, path in enumerate(paths):
+        if i == 0:
+            index = 0
+        elif i in [1, 2]:
+            index = num_ops
+        else:
+            index = num_ops + num_ops ** 2
+        for j, op in enumerate(path):
+            index += op * num_ops ** j
+        path_indices.append(index)
+
+    return tuple(path_indices)
+
+
+def nb201_to_paths(net, num_ops=5, longest_path_length=3):
+    # FROM NASLIB #
+    num_paths = sum([num_ops ** i for i in range(1, longest_path_length + 1)])
+
+    path_indices = get_path_indices(net, num_ops=num_ops)
+
+    encoding = np.zeros(num_paths)
+    for index in path_indices:
+        encoding[index] = 1
+    return encoding
+
+
 bench_conversions = {
     'zc_nasbench101': nb101_to_graph,
     'zc_nasbench201': nb201_to_graph,
     'zc_nasbench301': nb301_to_graph,
-    'zc_transbench101_micro': tnb101_to_graph
+    'zc_transbench101_micro': tnb101_to_graph,
+    'zc_transbench101_macro': tnb101_macro_encode
 }
+
+
+onehot_conversions = {
+    'zc_nasbench101': nb101_to_onehot,
+    'zc_nasbench201': encode_adjacency_one_hot_op_indices,
+    'zc_nasbench301': encode_adj,
+    'zc_transbench101_micro': encode_adjacency_one_hot_transbench_micro_op_indices,
+    'zc_transbench101_macro': encode_adjacency_one_hot_transbench_macro_op_indices
+}
+
+
+embedding_conversions = {
+    'zc_nasbench101': nb101_arch2vec_embedding, 
+    'zc_nasbench201': nb201_arch2vec_embedding
+}
+
+
+wl_feature_conversions = {
+    'zc_nasbench101': nb101_nx_graphs, 
+    'zc_nasbench201': nb201_nx_graphs, 
+    'zc_nasbench301': nb301_nx_graphs
+}
+
+
+path_conversions = {
+    'zc_nasbench101': nb101_to_paths,
+    'zc_nasbench201': nb201_to_paths,
+    'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_paths
+}
+
