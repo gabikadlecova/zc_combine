@@ -1,6 +1,7 @@
 import json
 import os.path
 import pickle
+import pdb
 
 import numpy as np
 import pandas as pd
@@ -26,7 +27,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
                                use_features=True, use_all_proxies=False, use_flops_params=True, use_onehot=False,
                                use_embedding=False, use_path_encoding=False, zero_unreachable=True, keep_uniques=True,
                                target_csv=None, target_key='val_accs', cache_path=None, version_key=None,
-                               compute_all=False, embedding_path='../data/arch2vec/'):
+                               compute_all=False, embedding_path='../data/arch2vec/', multi_objective=False):
     """
         Load feature and proxy datasets, feature dataset can be precomputed or will be loaded from the config.
         Validation accuracy will be returned as the target.
@@ -54,6 +55,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
         version_key: Version key to check with loaded dataset, or for saving it.
         compute_all: If True, compute all features even if `features` is None. Good for caching.
         embedding_path: Path to saved arch2vec embeddings.
+        multi_objective: If only target_key or several targets from csv file
 
     Returns:
         dataset, y - feature and/or proxy dataset, validation accuracy
@@ -74,7 +76,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     features = features if features is None else features.split(',')
     proxy = proxy.split(',') if proxy is not None else []
 
-    y = get_accs_or_target(data, target_csv=target_csv, target_key=target_key)
+    y = get_accs_or_target(data, target_csv=target_csv, target_key=target_key, multi_objective=multi_objective)
 
     nets = data['net']
     proxy_cols = _get_proxy_columns(data, use_all_proxies, use_flops_params, proxy)
@@ -83,7 +85,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
                        use_onehot=use_onehot, use_embedding=use_embedding, use_path_encoding=use_path_encoding,
                        cache_path=cache_path, version_key=version_key, compute_all=compute_all,
-                       embedding_path=embedding_path)
+                       embedding_path=embedding_path, multi_objective=multi_objective)
     return {'nets': nets, 'proxy_columns': proxy_cols}, data, y
 
 
@@ -96,13 +98,13 @@ bench_names = {
 }
 
 
-def get_accs_or_target(data, target_csv=None, target_key=None):
+def get_accs_or_target(data, target_csv=None, target_key=None, multi_objective=None):
     # either use validation accuracy as the target, or a user-defined metric in a separate csv file
     if target_csv is None:
         y = data[target_key]
     else:
         target_df = pd.read_csv(target_csv)
-        y = get_target(target_df, data['net'], target_key=target_key)
+        y = get_target(target_df, data['net'], target_key=target_key, multi_objective=multi_objective)
     return y
 
 
@@ -202,7 +204,7 @@ def _get_proxy_columns(data, use_all_proxies, use_flops_params, proxy_cols):
 
 def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True, use_all_proxies=False,
                 use_onehot=False, use_embedding=False, use_flops_params=True, use_path_encoding=False, cache_path=None, version_key=None,
-                compute_all=False, embedding_path='../data/arch2vec/'):
+                compute_all=False, embedding_path='../data/arch2vec/', multi_objective=False):
     feature_dataset = []
     # compute or load network features
     if use_features:
@@ -234,28 +236,32 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
     return res_data
 
 
-def get_target(target_data, net_tuples, target_key='val_accs', net_key='net'):
+def get_target(target_data, net_tuples, target_key='val_accs', net_key='net', multi_objective=None):
     # select nets based on net_tuples
     target_data = target_data.reset_index(drop=True).set_index(net_key)
     target_data = target_data.loc[net_tuples].reset_index().set_index(net_tuples.index).rename_axis(None)
-
-    return target_data[target_key]
+    
+    if multi_objective:
+        # forcely include also val_accs as target_key
+        return target_data[['val_accs', target_key]]
+    else:
+        return target_data[target_key]
 
 
 def get_embedding(data, benchmark, embedding_path='../data/arch2vec/'):
-    # cache_embedding_path = os.path.join(str(embedding_path), str(benchmark)+"_arch2vec.pickle")
-    # print(cache_embedding_path)
-    # if not os.path.exists(cache_embedding_path):
-    print('create embedding data')
-    embedding_data = torch.load(embedding_path + str(benchmark) + '_embeddings.pt')
-    embedding_convert = embedding_conversions[get_bench_key(benchmark)]
-    embeddings = {i: embedding_convert(eval(data.loc[i]['net']), embedding_data) for i in data.index}
-    embeddings = pd.DataFrame(embeddings.values(), index=embeddings.keys())
-    embeddings.columns = [f"embeddings_{c}" for c in embeddings.columns]
-        # embeddings.to_pickle(cache_embedding_path)
-    # else: 
-        # print('load embedding data')
-        # embeddings = pd.read_pickle(cache_embedding_path)  
+    cache_embedding_path = os.path.join(str(embedding_path), str(benchmark)+"_embeddings.csv")
+    if not os.path.exists(cache_embedding_path):
+        print('create embedding data')
+        embedding_data = torch.load(embedding_path + str(benchmark) + '_embeddings.pt')
+        embedding_convert = embedding_conversions[get_bench_key(benchmark)]
+        embeddings = {i: embedding_convert(eval(data.loc[i]['net']), embedding_data) for i in data.index}
+        embeddings = pd.DataFrame(embeddings.values(), index=embeddings.keys())
+        embeddings.columns = [f"embeddings_{c}" for c in embeddings.columns]
+        embeddings = pd.concat([data['net'], embeddings], axis=1)
+        embeddings.to_csv(cache_embedding_path)
+    else: 
+        print('load embedding data')
+        embeddings = pd.read_csv(cache_embedding_path, index_col=0)
     return embeddings
 
 
@@ -387,6 +393,10 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
 
     res['r2'] = r2_score(true, preds)
     res['mse'] = mean_squared_error(true, preds)
-    res['tau'] = kendalltau(preds, true)[0]
-    res['corr'] = spearmanr(preds, true)[0]
+    if len(preds.shape) == 2:
+        res['corr'] = np.mean([spearmanr(preds[:,0], true.iloc[:,0])[0], spearmanr(preds[:,1], true.iloc[:,1])[0]])
+        res['tau'] = np.mean([kendalltau(preds[:,0], true.iloc[:,0])[0], kendalltau(preds[:,1], true.iloc[:,1])[0]])
+    else:
+        res['corr'] = spearmanr(preds, true)[0]
+        res['tau'] = kendalltau(preds, true)[0]
     return res

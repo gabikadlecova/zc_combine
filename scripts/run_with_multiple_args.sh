@@ -14,3 +14,6 @@ python get_script_args.py --input_file $infile --id $id --step $step | while rea
   export pca_args=$pca_args feature_args=$feature_args train_args=$train_args row_id=$row_id
   $@  
 done
+
+
+

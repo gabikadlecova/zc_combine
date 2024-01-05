@@ -1,6 +1,7 @@
 import argparse
 import json
 import pandas as pd
+import pdb
 
 from zc_combine.utils.args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
 from zc_combine.utils.log import set_up_logging, log_to_wandb, log_to_csv
@@ -23,7 +24,7 @@ def train_and_eval(args):
                                                       use_all_proxies=args['use_all_proxies'],
                                                       use_flops_params=args['use_flops_params'],
                                                       use_onehot=args['use_onehot'],
-                                                      use_embedding=args['use_embedding'],
+                                                      use_embedding=args['use_embedding'], 
                                                       use_path_encoding=args['use_path_encoding'],
                                                       zero_unreachable=args['zero_unreachables'],
                                                       keep_uniques=args['keep_uniques'],
@@ -31,7 +32,8 @@ def train_and_eval(args):
                                                       target_key=args['target_key'],
                                                       cache_path=cache_path,
                                                       version_key=args['version_key'],
-                                                      compute_all=args['compute_all_'])
+                                                      compute_all=args['compute_all_'],
+                                                      multi_objective=args["multi_objective"])
 
     # select subset of columns based on previously saved data
     if args['columns_json_'] is not None:
