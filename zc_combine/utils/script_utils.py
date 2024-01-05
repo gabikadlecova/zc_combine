@@ -9,6 +9,7 @@ from scipy.stats import kendalltau, spearmanr
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 import torch
+from sklearn.preprocessing import StandardScaler
 
 from zc_combine.features import feature_dicts
 from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions, onehot_conversions, \
@@ -76,13 +77,14 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
     y = get_accs_or_target(data, target_csv=target_csv, target_key=target_key)
 
     nets = data['net']
+    proxy_cols = _get_proxy_columns(data, use_all_proxies, use_flops_params, proxy)
 
     data = get_dataset(data, benchmark, cfg=cfg, features=features, proxy_cols=proxy,
                        use_features=use_features, use_all_proxies=use_all_proxies, use_flops_params=use_flops_params,
                        use_onehot=use_onehot, use_embedding=use_embedding, use_path_encoding=use_path_encoding,
                        cache_path=cache_path, version_key=version_key, compute_all=compute_all,
                        embedding_path=embedding_path)
-    return nets, data, y
+    return {'nets': nets, 'proxy_columns': proxy_cols}, data, y
 
 
 bench_names = {
@@ -189,6 +191,15 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
     return feature_dataset
 
 
+def _get_proxy_columns(data, use_all_proxies, use_flops_params, proxy_cols):
+    if use_all_proxies:
+        proxy_cols = set(c for c in data.columns if c not in ['random', 'rank', 'new_net', 'net', 'val_accs'])
+    else:
+        proxy_cols = proxy_cols if proxy_cols is not None else []
+        proxy_cols = {'flops', 'params', *proxy_cols} if use_flops_params else set(proxy_cols)
+    return proxy_cols
+
+
 def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_features=True, use_all_proxies=False,
                 use_onehot=False, use_embedding=False, use_flops_params=True, use_path_encoding=False, cache_path=None, version_key=None,
                 compute_all=False, embedding_path='../data/arch2vec/'):
@@ -199,11 +210,7 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
         feature_dataset = load_or_create_features(nets, cfg, benchmark, features=features, cache_path=cache_path,
                                                   version_key=version_key, compute_all=compute_all)
 
-    if use_all_proxies:
-        proxy_cols = set(c for c in data.columns if c not in ['random', 'rank', 'new_net', 'net', 'val_accs'])
-    else:
-        proxy_cols = proxy_cols if proxy_cols is not None else []
-        proxy_cols = {'flops', 'params', *proxy_cols} if use_flops_params else set(proxy_cols)
+    proxy_cols = _get_proxy_columns(data, use_all_proxies, use_flops_params, proxy_cols)
     proxy_df = data[[c for c in data.columns if c in proxy_cols]]
 
     onehot = []
@@ -303,6 +310,22 @@ def get_path_encoding(data, benchmark, net_key='net'):
 def get_data_splits(data, y, **kwargs):
     tr_X, te_X, tr_y, te_y = train_test_split(data, y, **kwargs)
     return {"train_X": tr_X, "test_X": te_X, "train_y": tr_y, "test_y": te_y}
+
+
+def normalize_columns(data_splits, proxy_cols):
+    normalizer = StandardScaler()
+    normalizer.fit(data_splits['train_X'][proxy_cols])
+    train_proxies = normalizer.transform(data_splits['train_X'][proxy_cols])
+    test_proxies = normalizer.transform(data_splits['test_X'][proxy_cols])
+
+    for i, c in enumerate(data_splits['train_X'].columns):
+        assert data_splits['test_X'].columns[i] == c
+
+    for i, p in zip(range(train_proxies.shape[1]), proxy_cols):
+        data_splits['train_X'][p] = train_proxies[:, i]
+        data_splits['test_X'][p] = test_proxies[:, i]
+
+    return data_splits
 
 
 def _dict_to_lists(mdict, res_dict, prefix='', mean_m=False):

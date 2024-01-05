@@ -5,7 +5,7 @@ import pandas as pd
 from zc_combine.utils.args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
 from zc_combine.utils.log import set_up_logging, log_to_wandb, log_to_csv
 from zc_combine.utils.script_utils import load_feature_proxy_dataset, get_data_splits, eval_model, \
-    create_cache_filename, get_wl_embedding
+    create_cache_filename, get_wl_embedding, normalize_columns
 from zc_combine.predictors import predictor_cls
 
 
@@ -17,21 +17,21 @@ def train_and_eval(args):
         cache_path = create_cache_filename(args['cache_dir_'], args['cfg'], args['features'], args['version_key'],
                                            args['compute_all_'])
 
-    _, dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
-                                               cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
-                                               meta=args['meta'], use_features=args['use_features'],
-                                               use_all_proxies=args['use_all_proxies'],
-                                               use_flops_params=args['use_flops_params'],
-                                               use_onehot=args['use_onehot'],
-                                               use_embedding=args['use_embedding'], 
-                                               use_path_encoding=args['use_path_encoding'],
-                                               zero_unreachable=args['zero_unreachables'],
-                                               keep_uniques=args['keep_uniques'],
-                                               target_csv=args['target_csv_'],
-                                               target_key=args['target_key'],
-                                               cache_path=cache_path,
-                                               version_key=args['version_key'],
-                                               compute_all=args['compute_all_'])
+    net_data, dataset, y = load_feature_proxy_dataset(args['searchspace_path_'], args['benchmark'], args['dataset'],
+                                                      cfg=args['cfg'], features=args['features'], proxy=args['proxy'],
+                                                      meta=args['meta'], use_features=args['use_features'],
+                                                      use_all_proxies=args['use_all_proxies'],
+                                                      use_flops_params=args['use_flops_params'],
+                                                      use_onehot=args['use_onehot'],
+                                                      use_embedding=args['use_embedding'],
+                                                      use_path_encoding=args['use_path_encoding'],
+                                                      zero_unreachable=args['zero_unreachables'],
+                                                      keep_uniques=args['keep_uniques'],
+                                                      target_csv=args['target_csv_'],
+                                                      target_key=args['target_key'],
+                                                      cache_path=cache_path,
+                                                      version_key=args['version_key'],
+                                                      compute_all=args['compute_all_'])
 
     # select subset of columns based on previously saved data
     if args['columns_json_'] is not None:
@@ -54,7 +54,9 @@ def train_and_eval(args):
 
         # train test split, access splits - res['train_X'], res['test_y'],...
         data_splits = get_data_splits(dataset, y, random_state=curr_data_seed, train_size=args['train_size'])
-        
+        if args['normalize_proxies']:
+            data_splits = normalize_columns(data_splits, net_data['proxy_columns'])
+
         ##### use train data to fit WL Kernel here
         if args['use_wl_embedding']:
             data_splits = get_wl_embedding(data_splits, args['benchmark'])
@@ -112,6 +114,8 @@ if __name__ == "__main__":
                         help="Seed (absolute) for restart, will skip seeds "
                              "smaller than this value. Runs for all seeds between [restart_data_seed, data_seed + n_train_samples)")
     parser_add_flag(parser, 'log_featimp_', 'no_log_featimp', False, help_neg="If True, log feature importances.")
+    parser_add_flag(parser, 'normalize_proxies', 'no_normalize_proxies', False,
+                    help_pos="If True, normalize proxy columns in data using the train set.")
 
     args = parse_and_read_args(parser)
 
