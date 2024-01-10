@@ -39,7 +39,7 @@ def main(key, project, timeout, cfg_args, metric_keys, out_path, nan_check_path,
     # check if all seeds ran for all runs and if no nans are present
     incomplete_runs = []
 
-    visited = {}
+    visited = set()
 
     results_df = []
     for run in tqdm(runs):
