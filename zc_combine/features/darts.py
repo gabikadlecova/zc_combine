@@ -85,6 +85,5 @@ def get_min_node_path(cells, banned):
 feature_func_dict = {
     'op_count': get_op_counts,
     'node_degree': get_node_degrees,
-    'max_op_on_path': get_max_path,
-    'min_path_len': get_min_node_path
+    'max_op_on_path': get_max_path
 }
