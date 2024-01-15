@@ -185,7 +185,7 @@ def load_or_create_features(nets, cfg, benchmark, features=None, cache_path=None
         with open(cache_path, 'wb') as f:
             pickle.dump(save_data, f)
 
-    if compute_all:
+    if features is not None and compute_all:
         feature_dataset = [f for k, f in feature_dataset.items() if k in features]
     else:
         feature_dataset = [f for f in feature_dataset.values()]
