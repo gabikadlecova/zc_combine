@@ -229,7 +229,8 @@ def get_dataset(data, benchmark, cfg=None, features=None, proxy_cols=None, use_f
 
     # Add net string back here for WL kernel calculation
     # get data and y
-    res_data = pd.concat([*feature_dataset, proxy_df, *onehot, *path_enc, data['net']], axis=1)
+    res_data = pd.concat([*feature_dataset, proxy_df, *onehot, *path_enc, *embedding_features, data['net']],
+                         axis=1)
     res_data.columns = [c.replace('[', '(').replace(']', ')') for c in res_data.columns]
     if 'val_accs' in res_data.columns:
         res_data.drop(columns='val_accs', inplace=True)
