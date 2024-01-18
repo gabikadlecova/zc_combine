@@ -3,9 +3,6 @@
     "name": "op_count"
   },
   {
-    "name": "edge_count"
-  },
-  {
     "name": "min_path_len",
     "kwargs": {"banned": [[], [2], [3], [4], [2, 3], [2, 4], [3, 4]]}
   },
@@ -15,10 +12,6 @@
   },
   {
     "name": "node_degree",
-    "kwargs": {"allowed": [[2], [3], [4], [2, 3], [2, 4], [3, 4], [2, 3, 4]]}
-  },
-  {
-    "name": "num_paths",
     "kwargs": {"allowed": [[2], [3], [4], [2, 3], [2, 4], [3, 4], [2, 3, 4]]}
   }
 ]

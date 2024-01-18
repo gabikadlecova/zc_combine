@@ -1,0 +1,13 @@
+{
+  "data_seed": "42-47",
+  "train_size": [20, 100, 1000],
+  "cfg": ["../zc_combine/configs/nb201_first.json", "../zc_combine/configs/nb201_full.json"],
+  "_raw_settings": ["--out_ train --meta ../data/robustness-dataset/meta.json --robustness_evals --robustness_data_path ../data/robustness-dataset/ --multi_objective"], 
+  "_raw_columns": [
+    "--use_all_proxies", "",
+    "--proxy fisher",  "--proxy jacov"],
+  "model": ["rf"],
+  "attack": ["fgsm@Linf", "pgd@Linf", "aa_apgd-ce@Linf", "aa_square@Linf"],
+  "eps_attack": ["8.0"], 
+  "wandb_project_": "zc_combine_rob_8"
+}

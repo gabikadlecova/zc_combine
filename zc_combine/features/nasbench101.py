@@ -39,9 +39,7 @@ def num_of_paths(net, allowed, start=0, end=1):
 
 feature_func_dict = {
     'op_count': count_ops_opnodes,
-    'edge_count': count_edges,
     'min_path_len': min_path_len_opnodes,
     'max_op_on_path': max_num_on_path_opnodes,
-    'node_degree': node_degree,
-    'num_paths': num_of_paths
+    'node_degree': node_degree
 }

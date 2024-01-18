@@ -3,11 +3,6 @@ import numpy as np
 from zc_combine.features.base import count_ops, get_in_out_edges, max_num_on_path, min_path_len
 
 
-# TODO prevest to na jmena a ne idx, check
-# TODO out degree se musi delat jinak
-# TODO bridges? independent nodes? nejak ruzny topo sorty?
-
-
 def _get_for_both_cells(cells, func):
     normal = func(cells[0])
     reduce = func(cells[1])
@@ -33,7 +28,7 @@ def _get_cell_degrees(net, allowed):
 
     in_edges, out_edges = get_in_out_edges(net[1], allowed)
     return {f'{input1}_degree': len(in_edges[input1]), f'{input2}_degree': len(in_edges[input2]),
-            'out_degree': len(out_edges[output]), 'avg_in': get_avg(in_edges), 'avg_out': get_avg(out_edges)}
+            'avg_in': get_avg(in_edges), 'avg_out': get_avg(out_edges)}
 
 
 def get_node_degrees(cells, allowed):
@@ -85,6 +80,5 @@ def get_min_node_path(cells, banned):
 feature_func_dict = {
     'op_count': get_op_counts,
     'node_degree': get_node_degrees,
-    'max_op_on_path': get_max_path,
-    'min_path_len': get_min_node_path
+    'max_op_on_path': get_max_path
 }
