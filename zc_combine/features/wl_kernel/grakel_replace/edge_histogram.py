@@ -5,7 +5,7 @@
 from warnings import warn
 
 from collections import Counter
-from collections import Iterable
+from collections.abc import Iterable
 
 from grakel.graph import Graph
 
