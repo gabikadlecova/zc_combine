@@ -243,7 +243,7 @@ def get_target(target_data, net_tuples, target_key='val_accs', net_key='net', mu
     target_data = target_data.loc[net_tuples].reset_index().set_index(net_tuples.index).rename_axis(None)
     
     if multi_objective:
-        # forcely include also val_accs as target_key
+        # forcefully include also val_accs as target_key
         return target_data[['val_accs', target_key]]
     else:
         return target_data[target_key]
