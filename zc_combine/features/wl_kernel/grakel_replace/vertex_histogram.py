@@ -3,7 +3,7 @@
 
 import logging
 from collections import Counter
-from collections import Iterable
+from collections.abc import Iterable
 from warnings import warn
 
 import numpy as np
