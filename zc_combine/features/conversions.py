@@ -324,6 +324,6 @@ wl_feature_conversions = {
 path_conversions = {
     'zc_nasbench101': nb101_to_paths,
     'zc_nasbench201': nb201_to_paths,
-    'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_paths
+    'zc_nasbench301': naslib.search_spaces.nasbench301.encodings.encode_paths,
+    'zc_transbench101_micro': lambda net: nb201_to_paths(net, num_ops=4, longest_path_length=3)
 }
-
