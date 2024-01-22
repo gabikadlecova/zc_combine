@@ -1,0 +1,9 @@
+pandas
+pyarrow
+numpy
+scipy
+wandb
+scikit-learn
+seaborn
+torch
+
