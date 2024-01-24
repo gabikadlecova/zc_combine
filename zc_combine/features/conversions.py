@@ -131,8 +131,11 @@ def encode_to_onehot(net, benchmark):
 def pad_nb101_net(net):
     matrix_dim = len(net['matrix'])
     if matrix_dim < 7:
+        net = copy.deepcopy(net)
         padval = 7 - matrix_dim
         net['matrix'] = np.pad(net['matrix'], [(0, padval), (0, padval)])
+        net['matrix'][:, -1] = net['matrix'][:, -2]
+        net['matrix'][:, -2] = 0
         for _ in range(padval):
             net['ops'].insert(-1, 'maxpool3x3')
 
