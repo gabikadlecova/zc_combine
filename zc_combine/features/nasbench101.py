@@ -14,8 +14,7 @@ def node_degree(net, allowed, start=0, end=1):
     get_func = lambda x, y: y([len(v) for v in x.values()])
 
     return {'in_degree': len(in_edges[end]), 'out_degree': len(out_edges[start]), 'avg_in': get_func(in_edges, np.mean),
-            'avg_out': get_func(out_edges, np.mean), 'max_out': get_func(out_edges, np.max),
-            'max_in': get_func(in_edges, np.max)}
+            'avg_out': get_func(out_edges, np.mean)}
 
 
 def count_edges(net):
