@@ -6,7 +6,10 @@ import pdb
 from zc_combine.utils.args_utils import parser_add_dataset_defaults, parse_and_read_args, log_dataset_args, parser_add_flag
 from zc_combine.utils.log import set_up_logging, log_to_wandb, log_to_csv
 from zc_combine.utils.script_utils import load_feature_proxy_dataset, get_data_splits, eval_model, \
-    create_cache_filename, get_wl_embedding, normalize_columns
+    create_cache_filename, get_wl_embedding, normalize_columns, shap_importances
+
+from sklearn.ensemble import RandomForestRegressor
+
 from zc_combine.predictors import predictor_cls
 
 
@@ -79,7 +82,10 @@ def train_and_eval(args):
         if args['log_featimp_']:
             importances_df = []
             for model, s in zip(fitted_models, res['seed']):
-                imps = {c: i for c, i in zip(data_splits['train_X'].columns, model.feature_importances_)}
+                if isinstance(model, RandomForestRegressor):
+                    imps = {c: i for c, i in zip(data_splits['train_X'].columns, shap_importances(model, data_splits['test_X']))}
+                else:
+                    imps = {c: i for c, i in zip(data_splits['train_X'].columns, model.feature_importances_)}
                 importances_df.append({'seed': s, **imps})
             importances_df = pd.DataFrame(importances_df)
 
