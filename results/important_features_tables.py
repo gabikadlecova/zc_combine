@@ -9,7 +9,7 @@ from zc_combine.fixes.operations import get_ops_edges_nb201, get_ops_edges_tnb10
 def create_map(bench):
     suffix = '_full' if bench != 'nb101' and 'macro' not in bench else '_first'
     cfg = f'../zc_combine/configs/{bench}{suffix}.json'
-    dataset = 'cifar10' if bench != 'tnb101' else 'class_scene'
+    dataset = 'cifar10' if 'tnb101' not in bench else 'class_scene'
 
     version_key = 'paper'
     cache_path = create_cache_filename('../scripts/cache_data/', cfg, None, version_key, True)
@@ -21,10 +21,13 @@ def create_map(bench):
         ops, _ = get_ops_edges_nb201()
     elif bench == 'tnb101':    
         ops, _ = get_ops_edges_tnb101()
+        ops = ops[:-1]  # no avg pooling
     elif bench == 'nb101':
         ops = get_ops_nb101()
     elif bench == 'nb301':
         ops = get_ops_nb301()
+    elif bench == 'tnb101_macro':
+        ops = []
     else:
         raise ValueError()
 
@@ -158,6 +161,32 @@ def create_map(bench):
         return f"{feature_name}{opset}{suffix}"
 
 
+    def to_better_colname_macro(c):
+        if 'count_ops' in c:
+            vals = c.replace('count_ops_ch', '')
+            channels = vals.startswith('True')  # channel
+            strides = vals.endswith('True')  # downsample
+        
+            if not channels and not strides:
+                return "number of simple convs"
+        
+            what = []
+            if channels:
+                what.append('channel increased')
+            if strides:
+                what.append('strided')
+            return f"number of convs - {' + '.join(what)}"
+        elif 'pos' in c:
+            vals = c.split('_')
+            assert vals[2] in ['ch', 's']
+            channels = vals[2] == 'ch'
+            pos = vals[-1]
+            what = 'channel increases' if channels else 'strides'
+            return f"Number of {what} until pos. {pos}"
+        else:
+            raise ValueError()
+
+
     # In[159]:
 
 
@@ -179,7 +208,11 @@ def create_map(bench):
             new_cols_map[c] = c
             continue
         try:
-            new_c = to_better_colname(c, op_map)
+            if bench != 'tnb101_macro':
+                new_c = to_better_colname(c, op_map)
+            else:
+                new_c = to_better_colname_macro(c)
+
             new_cols_map[c] = new_c
         except ValueError:
             print(f'Skipping {c}')
