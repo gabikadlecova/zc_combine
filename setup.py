@@ -5,8 +5,6 @@ from distutils.core import setup
 setup(name='zc_combine',
       version='0.1',
       description='Combining zero cost proxies',
-      packages=['zc_combine'],
-      author='Gabriela Kadlecova',
-      author_email='gabi.suchoparova@gmail.com',
+      packages=['zc_combine']
      )
 

@@ -41,7 +41,7 @@ python train_on_features.py --out_ OUT_DIR --benchmark nb201 --cfg ../zc_combine
 
 1. create run config .json files
 In `zc_combine/scripts/experiments`, there are folders for experiments. Every folder contains one or more .json files,
-for example [train_args.json](https://github.com/gabikadlecova/zc_combine/blob/main/scripts/experiments/include_proxy_nb201/train_args.json):
+for example train_args.json ... ./scripts/experiments/include_proxy_nb201/train_args.json:
 ```
 {
   "data_seed": "42-47",
@@ -97,3 +97,73 @@ bash run_with_multiple_args.sh experiments/<experiment dir>/experiment_settings.
   `zc_combine/scripts/experiments/pca_*/` for example config files
     - Dataset config args should be specified in the pca json file to ensure running with the same data.
       **Avoid specifying any dataset args in the train json file**
+
+
+## HW experiments
+
+1. HW files
+
+ - download `HW-NAS-Bench-v1_0.pickle` from https://github.com/GATECH-EIC/HW-NAS-Bench
+ - save it do `data/`
+ - `python prepare_hw_bench.py`
+
+2. Config files to run HW experiments:
+
+experiments0/paper_hw_cifar10/
+experiments/paper_hw_cifar100/
+experiments/paper_hw_imagenet/
+
+3. Config files to run RF acc. prediction with logging importances:
+(has to be run localy)
+
+```
+ experiments/paper_nb101/train_args.json
+ experiments/paper_nb201/train_args.json
+ experiments/paper_nb301/train_args.json
+ experiments/paper_tnb101_macro/train_args.json
+ experiments/paper_tnb101_micro/train_args.json
+```
+Example:
+`python create_args_df.py --dir_path experiments/paper_nb201/`
+`bash run_with_multiple_args.sh experiments/paper_nb201/experiment_settings.csv 0 1 bash run_train_local.sh $ENV_NAME paper_exp ./cache/ paper_version`
+
+4.1. Analyzing importances:
+
+`cd paper_exp`
+`python ../analyze_importances.py 1024 nb201 cifar10`
+
+This produces CSV files named `{benchmark}_{dataset}_{train_size}.csv`.
+
+4.2. Creating tables:
+
+Go to directory `results` and copy CSV files produced in previous step to `data/`.
+
+`python important_features_tables.py`
+`./table.sh`
+
+
+5. Independent set of features selection:
+
+```usage: select_independent_feature_set.py [-h]
+                                         [--searchspace_path_ SEARCHSPACE_PATH_]
+                                         [--benchmark BENCHMARK]
+                                         [--data_seed DATA_SEED]
+                                         [--cache_dir_ CACHE_DIR_] [--cfg CFG]
+                                         [--version_key VERSION_KEY]```
+
+To create linearly independent sets of features run:
+`python select_independent_feature_set.py --benchmark nb101 --cfg ../zc_combine/configs/nb101_first_short.json`
+`python select_independent_feature_set.py --benchmark nb201 --cfg ../zc_combine/configs/nb201_full_short.json`
+`python select_independent_feature_set.py --benchmark nb301 --cfg ../zc_combine/configs/nb301_full_short.json`
+
+It outputs `{benchmark}_selected_features.json`.
+
+6. Run predictions with selected features only:
+
+Use config files in directories:
+```
+experiments/nb101_selected/
+experiments/nb201_selected/
+experiments/nb301_selected/
+```
+
