@@ -1,0 +1,18 @@
+{
+  "data_seed": 42,
+  "n_train_samples": 50,
+  "train_size": [32, 128, 1024],
+  "cfg": ["../zc_combine/configs/nb201_full.json"],
+  "_raw_settings": ["--out_ train_hw_bench"],
+  "_raw_columns": [
+    "--use_all_proxies --use_onehot", "--use_onehot", "--use_onehot --no_features --no_flops_params",
+    "--use_onehot --no_features", "--use_onehot --no_features --use_all_proxies",
+    "--use_onehot --no_flops_params", "--no_flops_params", "--use_all_proxies",
+    "--use_all_proxies --no_features", ""
+  ],
+  "model": ["rf"],
+  "dataset": ["cifar100"],
+  "target_csv_": ["../data/hw_cifar100.csv"],
+    "target_key": ["edgegpu_energy", "edgegpu_latency", "raspi4_latency", "edgetpu_latency", "pixel3_latency", "eyeriss_latency", "eyeriss_energy", "eyeriss_arithmetic_intensity", "fpga_latency", "fpga_energy"],
+  "wandb_project_": "paper_hw_all"
+}

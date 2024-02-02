@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 import torch
 from sklearn.preprocessing import StandardScaler
+import shap
 
 from zc_combine.features import feature_dicts
 from zc_combine.features.conversions import keep_only_isomorpic_nb201, bench_conversions, onehot_conversions, \
@@ -401,3 +402,13 @@ def predict_on_test(model, test_X, test_y, sample=None, seed=None):
         res['corr'] = spearmanr(preds, true)[0]
         res['tau'] = kendalltau(preds, true)[0]
     return res
+
+
+def shap_importances(model, test_X):
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(test_X)
+    shap_values = np.abs(shap_values).mean(axis=0)
+    return shap_values
+
+def get_timestamp():
+    return datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y-%H-%M-%S-%f")

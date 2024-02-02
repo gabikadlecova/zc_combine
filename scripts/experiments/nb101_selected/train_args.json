@@ -1,0 +1,12 @@
+{
+  "data_seed": 42,
+  "benchmark": "nb101",
+  "n_train_samples": 50,
+  "train_size": [32, 128, 1024],
+  "cfg": ["../zc_combine/configs/nb101_first_short.json"],
+  "_raw_settings": ["--out_ paper_selected  --columns_json 'nb101_selected_features.json'"],
+  "_raw_columns": ["--use_all_proxies"],
+  "_raw_path": [""],
+  "model": ["rf"],
+    "dataset": ["cifar10"]
+}
