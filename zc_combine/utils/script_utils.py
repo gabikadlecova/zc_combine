@@ -147,9 +147,11 @@ def keep_unique_nets(data, tnb=False, replace_bad=False, filter_nets=None, zero_
     if replace_bad:
         data = data.copy()
         for i in data.index:
-            valid_net = data[data['net'] == data.loc[i, 'new_net']]
-            assert len(valid_net) == 0
-            data.loc[i] = valid_net.iloc[0]
+            if data.loc[i]['net'] != data.loc[i]['new_net']:
+                valid_net = data[data['net'] == data.loc[i, 'new_net']]
+                assert len(valid_net) == 1 or len(valid_net.drop_duplicates()) == 1
+                data.loc[i] = valid_net.iloc[0]
+
         return data
 
     return data[data['net'] == data['new_net']] if zero_unreachable else data
