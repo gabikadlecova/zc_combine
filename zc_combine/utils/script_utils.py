@@ -152,7 +152,7 @@ def keep_unique_nets(data, tnb=False, replace_bad=False, filter_nets=None, zero_
                 valid_net = data[data['net'] == data.loc[i, 'new_net']]
                 assert len(valid_net) == 1 or len(valid_net.drop_duplicates()) == 1
                 data.loc[i] = valid_net.iloc[0]
-                data.loc[i]['val_accs'] = old_acc
+                data.loc[i, 'val_accs'] = old_acc
 
         return data
 
