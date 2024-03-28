@@ -28,7 +28,8 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
                                use_features=True, use_all_proxies=False, use_flops_params=True, use_onehot=False,
                                use_embedding=False, use_path_encoding=False, zero_unreachable=True, keep_uniques=True,
                                target_csv=None, target_key='val_accs', cache_path=None, version_key=None,
-                               compute_all=False, embedding_path='../data/arch2vec/', multi_objective=False):
+                               compute_all=False, embedding_path='../data/arch2vec/', multi_objective=False,
+                               replace_bad=False):
     """
         Load feature and proxy datasets, feature dataset can be precomputed or will be loaded from the config.
         Validation accuracy will be returned as the target.
@@ -68,7 +69,7 @@ def load_feature_proxy_dataset(searchspace_path, benchmark, dataset, cfg=None, f
             meta = json.load(f)
 
     zero_unreachable = zero_unreachable if keep_uniques else False
-    data = load_bench_data(searchspace_path, benchmark, dataset, filter_nets=meta, zero_unreachable=zero_unreachable)
+    data = load_bench_data(searchspace_path, benchmark, dataset, replace_bad=replace_bad, filter_nets=meta, zero_unreachable=zero_unreachable)
 
     if cfg is not None:
         with open(cfg, 'r') as f:
@@ -128,7 +129,7 @@ def get_bench_key(benchmark):
     return bench_names[benchmark] if benchmark in bench_names else benchmark
 
 
-def keep_unique_nets(data, tnb=False, filter_nets=None, zero_unreachable=True):
+def keep_unique_nets(data, tnb=False, replace_bad=False, filter_nets=None, zero_unreachable=True):
     _, edge_map = get_ops_edges_tnb101() if tnb else get_ops_edges_nb201()
 
     if zero_unreachable:
@@ -143,10 +144,18 @@ def keep_unique_nets(data, tnb=False, filter_nets=None, zero_unreachable=True):
         unique_new_nets = unique_data['new_net' if zero_unreachable else 'net']
         return data[data['net'].isin(unique_new_nets)]
 
+    if replace_bad:
+        data = data.copy()
+        for i in data.index:
+            valid_net = data[data['net'] == data.loc[i, 'new_net']]
+            assert len(valid_net) == 0
+            data.loc[i] = valid_net.iloc[0]
+        return data
+
     return data[data['net'] == data['new_net']] if zero_unreachable else data
 
 
-def load_bench_data(searchspace_path, benchmark, dataset, filter_nets=None, zero_unreachable=True):
+def load_bench_data(searchspace_path, benchmark, dataset, replace_bad=False, filter_nets=None, zero_unreachable=True):
     benchmark = get_bench_key(benchmark)
     search_space = load_search_space(searchspace_path, benchmark)
     dfs = parse_scores(search_space)
@@ -154,7 +163,7 @@ def load_bench_data(searchspace_path, benchmark, dataset, filter_nets=None, zero
 
     tnb = 'trans' in benchmark and 'macro' not in benchmark
     if tnb or '201' in benchmark:
-        data = keep_unique_nets(data, tnb=tnb, filter_nets=filter_nets, zero_unreachable=zero_unreachable)
+        data = keep_unique_nets(data, tnb=tnb, replace_bad=replace_bad, filter_nets=filter_nets, zero_unreachable=zero_unreachable)
 
     return data
 

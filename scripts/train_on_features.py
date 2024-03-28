@@ -36,7 +36,8 @@ def train_and_eval(args):
                                                       cache_path=cache_path,
                                                       version_key=args['version_key'],
                                                       compute_all=args['compute_all_'],
-                                                      multi_objective=args["multi_objective"])
+                                                      multi_objective=args["multi_objective"],
+                                                      replace_bad=args['replace_bad'])
 
     # select subset of columns based on previously saved data
     if args['columns_json_'] is not None:
