@@ -17,12 +17,7 @@ def remove_zero_branches(edges, zero_op=1):
         for e in path:
             okay_edges.add(e)
 
-    new_edges = {e: val for e, val in edges.items() if e in okay_edges}
-
-    new_op_map = set([e[0] for e in new_edges.keys()] + [e[1] for e in new_edges.keys()])
-    new_op_map = {k: i for i, k in enumerate(sorted(list(new_op_map)))}
-    new_edges = {(new_op_map[e[0]], new_op_map[e[1]]): v for e, v in new_edges.items()}
-
+    new_edges = {e: (val if e in okay_edges else zero_op) for e, val in edges.items()}
     return new_edges
 
 
