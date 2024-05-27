@@ -7,6 +7,7 @@ import seaborn as sns
 FEAT_STRINGS = {'X': 'None (BRP-NAS)', 
                 'O': 'OH', 
                 'S': 'GRAF', 
+                'F': 'FP',
                 'OF': 'OH + FP', 
                 'SO': 'GRAF + OH', 
                 'SF': 'GRAF + FP', 
@@ -14,7 +15,8 @@ FEAT_STRINGS = {'X': 'None (BRP-NAS)',
                 'PF': 'ZCP', 
                 'POF': 'ZCP + OH', 
                 'PSF': 'ZCP + GRAF', 
-                'PSOF': 'ZCP + OH + GRAF',
+                'PSOF': 'ZCP + GRAF + OH',
+                'XE': 'PE',
                 'OE': 'OH + PE', 
                 'SE': 'GRAF + PE', 
                 'OFE': 'OH + FP + PE', 
@@ -24,7 +26,7 @@ FEAT_STRINGS = {'X': 'None (BRP-NAS)',
                 'PFE': 'ZCP + PE', 
                 'POFE': 'ZCP + OH + PE', 
                 'PSFE': 'ZCP + GRAF + PE', 
-                'PSOFE': 'ZCP + OH + GRAF + PE'
+                'PSOFE': 'ZCP + GRAF + OH + PE'
                }
 
 CONFIG_TRAINSIZE = {'config32': 32, 'config128_16': 128, 'config1024_16': 1024}
@@ -33,8 +35,20 @@ base_labels = ['X', 'O', 'OF', 'S', 'SF', 'SO', 'SOF', 'PF', 'POF', 'PSF', 'PSOF
 labels = base_labels
 labels += [bl + 'E' for bl in base_labels]
 
+labels += [bl + 'W' for bl in base_labels]
+for b in [bl + 'W' for bl in base_labels]:
+    FEAT_STRINGS[b] = FEAT_STRINGS[b[:-1]] + ' + WL'
 
-def latex_table(df, stats, columns=None, caption='', hlines=[0]):
+labels += [bl + 'A' for bl in base_labels]
+for b in [bl + 'A' for bl in base_labels]:
+    FEAT_STRINGS[b] = FEAT_STRINGS[b[:-1]] + ' + A2V'
+
+labels += [bl + 'M' for bl in base_labels]
+for b in [bl + 'M' for bl in base_labels]:
+    FEAT_STRINGS[b] = FEAT_STRINGS[b[:-1]] + ' (MO)'
+
+
+def latex_table(df, stats, columns=None, caption='', hlines=[0], labels=labels):
     table_mean = df.mean().unstack()
     table_std = df.std().unstack()
     table_stat = stats.unstack()
@@ -44,7 +58,7 @@ def latex_table(df, stats, columns=None, caption='', hlines=[0]):
     table_mean = table_mean[cols]
     table_std = table_std[cols]
     table_stat = table_stat[cols]
-    cols = [FEAT_STRINGS[f] for f in cols]
+    cols = [FEAT_STRINGS[f] if f in FEAT_STRINGS else f for f in cols]
     table_mean.columns = cols
     table_std.columns = cols
     table_stat.columns = cols
@@ -136,6 +150,12 @@ def feat_string(row):
         out += 'F'
     if row['use_path_encoding']:
         out += 'E'
+    if 'use_wl_embedding' in row.index and row['use_wl_embedding']:
+        out += 'W'
+    if 'use_embedding' in row.index and row['use_embedding']:
+        out += 'A'
+    if 'multi_objective' in row.index and row['multi_objective']:
+        out += 'M'
     if out == '':
         out = 'X'
         
@@ -160,8 +180,11 @@ def load_data(file_name):
 
 def load_wandbd_dump(file_name):
     import pickle
-    with open(file_name, 'rb') as f:
-        runs_df = pickle.load(f)
+    if not isinstance(file_name, list):
+        file_name = [file_name]
+
+    dfs = [pickle.load(open(f, 'rb')) for f in file_name]
+    runs_df = pd.concat(dfs)
     
     exp_groups = [r['config']['exp_group'] for _, r in runs_df.iterrows()]
     targets = [eg[:eg.find('_gcn')] for eg in set(exp_groups)]

@@ -1,16 +1,34 @@
-# zc_combine
-Exploring combinations of zero-cost proxies
+# GRAF - Surprisingly Strong Performance Prediction with Neural Graph Features
+Main repository for running **GRAF** and zero-cost proxy experiments for our paper "[Surprisingly Strong Performance Prediction with Neural Graph Features](https://openreview.net/forum?id=EhPpZV6KLk)" ([arXiv](https://arxiv.org/abs/2404.16551)).
+
+```
+@inproceedings{kadlecova2024surprisingly,
+title={Surprisingly Strong Performance Prediction with Neural Graph Features},
+author={Gabriela Kadlecová and Jovita Lukasik and Martin Pilát and Petra Vidnerová and Mahmoud Safari and Roman Neruda and Frank Hutter},
+booktitle={Forty-first International Conference on Machine Learning},
+year={2024},
+url={https://openreview.net/forum?id=EhPpZV6KLk}
+}
+```
+
+Note #1: this repository mainly serves for reproducing the experiments of our paper. A refactored version where it will be easier to use GRAF in you research will be available in June/July 2024 as a separate repository.
+
+Note #2: the name of the repository is `zc_combine`, as we originally started just
+with exploring zero-cost proxy combinations, and then discovered the strength graph features.
+
+------
+To run our code:
 
 1. download all `zc_<searchspace>.json files`
 - follow [README](https://github.com/automl/NASLib/tree/zerocost) in `zerocost` branch of `NASlib`
 - copy files to `./data`
 
 2. install necessary packages
-- Develop branch of `naslib`
+- Develop branch of `naslib` (tested with python 3.9)
 - `xgboost`
 
 ### Data used in prediction NB201 and TNB101_micro
-Networks with branches with unreachable operations (due to zero operations) are left out
+Networks with branches with unreachable operations (due to zero operations) are left out. You can find more details of why we remove them in the paper (Section C2 in the Appendix).
 - e.g. (2, 1, 0, 1, 0, 2) and (2, 1, 0, 1, 0, 1) are the same - although there is a convolution between nodes 3 and 4
   (the last number is 2), it gets no input, since edges 1-3 and 2-3 are zero (number 1 in this encoding)
 - see zc_combine/fixes/operations.py for edge and op explanation per search space
@@ -98,6 +116,11 @@ bash run_with_multiple_args.sh experiments/<experiment dir>/experiment_settings.
     - Dataset config args should be specified in the pca json file to ensure running with the same data.
       **Avoid specifying any dataset args in the train json file**
 
+5. Results processing
+There are many scripts for processing results in `./results`.
+Notably, `process_run_results.py` processes all results in a wandb project (created using the previous scripts) and
+saves them to a .csv file. These .csv files can be then processed into tables and plots using `create_tables.ipynb`.
+`correlation_nb201.ipynb` in the same directory enable to explore zero-cost proxy biases and GRAF features.
 
 ## HW experiments
 
@@ -127,14 +150,16 @@ Example:
 `python create_args_df.py --dir_path experiments/paper_nb201/`
 `bash run_with_multiple_args.sh experiments/paper_nb201/experiment_settings.csv 0 1 bash run_train_local.sh $ENV_NAME paper_exp ./cache/ paper_version`
 
-4.1. Analyzing importances:
+4. Robustness experiments are run in a similar way.
+
+## Analyzing importances:
 
 `cd paper_exp`
 `python ../analyze_importances.py 1024 nb201 cifar10`
 
 This produces CSV files named `{benchmark}_{dataset}_{train_size}.csv`.
 
-4.2. Creating tables:
+1. Creating tables:
 
 Go to directory `results` and copy CSV files produced in previous step to `data/`.
 
@@ -142,7 +167,7 @@ Go to directory `results` and copy CSV files produced in previous step to `data/
 `./table.sh`
 
 
-5. Independent set of features selection:
+2. Independent set of features selection:
 
 ```usage: select_independent_feature_set.py [-h]
                                          [--searchspace_path_ SEARCHSPACE_PATH_]
@@ -155,10 +180,12 @@ To create linearly independent sets of features run:
 `python select_independent_feature_set.py --benchmark nb101 --cfg ../zc_combine/configs/nb101_first_short.json`
 `python select_independent_feature_set.py --benchmark nb201 --cfg ../zc_combine/configs/nb201_full_short.json`
 `python select_independent_feature_set.py --benchmark nb301 --cfg ../zc_combine/configs/nb301_full_short.json`
+```
 
 It outputs `{benchmark}_selected_features.json`.
 
-6. Run predictions with selected features only:
+
+3. Run predictions with selected features only:
 
 Use config files in directories:
 ```
@@ -167,3 +194,5 @@ experiments/nb201_selected/
 experiments/nb301_selected/
 ```
 
+## BRP-NAS
+We modified the original [BRP-NAS](https://github.com/SamsungLabs/eagle) code to run our GRAF + ZCP + BRP-NAS experiments. Refer to supplementary materials in [OpenReview](https://openreview.net/forum?id=EhPpZV6KLk) for the modified code.

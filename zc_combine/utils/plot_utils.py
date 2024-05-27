@@ -17,14 +17,14 @@ COLORS = sns.color_palette("bright") + sns.color_palette("colorblind")
 MARKERS = ['o', 'v', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X', '^', '<', '>']
 
 DEFAULT_MARKER_KWARGS = dict(
-    markersize=8,
+    markersize=6,
     fillstyle="full",
     markeredgewidth=1,
     markerfacecolor="white",
 )
     
 
-def make_plot(df, save_file=None, plot_val='kendalltau'):
+def make_plot(df, save_file=None, plot_val='kendalltau', one_column=False):
     all_res = df.copy()
     all_res.fillna(0, inplace=True)
     
@@ -79,18 +79,27 @@ def make_plot(df, save_file=None, plot_val='kendalltau'):
     data_color = {data_key: COLORS[i % len(COLORS)] for i, data_key in enumerate(opt_to_rank_dict)}
     
     fig_width = 487.8225/72.27 #
+    data_key_to_label = {p:p for p in df.predictor.unique()}
+
+    if one_column:
+        fig_width /= 2
+        data_key_to_label['graph_features_xgb_params'] = 'Z+G X+'
+        data_key_to_label['graph_features_xgb_tune'] = 'Z+G XT'
+        data_key_to_label['graph_features_xgb'] = 'Z+G X'
+        data_key_to_label['graph_features'] = 'Z+G RF'
+        data_key_to_label['graph_features_tune'] = 'Z+G RFT'
+        data_key_to_label['bayes_lin_reg'] = 'bayes...'
+        data_key_to_label['bohamiann'] = 'boha...'
+        data_key_to_label['var_sparse_gp'] = 'var_sp...'
+        data_key_to_label['sparse_gp'] = 'sparse...'
+    else:
+        data_key_to_label['graph_features_xgb_params'] = 'ZCP + GRAF XGB+'
+        data_key_to_label['graph_features_xgb_tune'] = 'ZCP + GRAF XGB tune'
+        data_key_to_label['graph_features_xgb'] = 'ZCP + GRAF XGB'
+        data_key_to_label['graph_features'] = 'ZCP + GRAF RF'
+        data_key_to_label['graph_features_tune'] = 'ZCP + GRAF RF tune'
     
     fig, ax = plt.subplots(figsize=(fig_width, 3))
-    
-    data_key_to_label = {p:p for p in df.predictor.unique()}
-    
-    data_key_to_label['graph_features_xgb_params'] = 'ZCP + GRAF XGB+'
-    data_key_to_label['graph_features_xgb_tune'] = 'ZCP + GRAF XGB tune'
-    data_key_to_label['graph_features_xgb'] = 'ZCP + GRAF XGB'
-    data_key_to_label['graph_features'] = 'ZCP + GRAF RF'
-    data_key_to_label['graph_features_tune'] = 'ZCP + GRAF RF'
-    
-    print(data_key_to_label)
     
     plot_curves_with_ranked_legends(
         ax=ax,
@@ -104,7 +113,8 @@ def make_plot(df, save_file=None, plot_val='kendalltau'):
         data_marker=data_marker,
         zoom_end_pct=0.8,
         label_fontsize=10,
-        linewidth=1
+        linewidth=1,
+        non_sig_lw=1
     )
     
     ax.set_ylabel(f"Kendall tau")
@@ -372,7 +382,8 @@ def plot_curves_with_ranked_legends(
         show_std_error: Optional[bool] = False,
         min_is_the_best: bool = False,
         stat_significance_map: Optional[Union[Dict[Tuple[str, str], bool], Callable[[Tuple[str, str]], bool]]] = None,
-        zoom_end_pct: Optional[float] = None
+        zoom_end_pct: Optional[float] = None,
+        non_sig_lw: int = 2,
 ):
     """
     Plot curves with legends written vertically with position corresponding to the final values (final regrets, scores,
@@ -520,7 +531,7 @@ def plot_curves_with_ranked_legends(
         x_col = np.linspace(x_start_legend, x_start_label, len(set(x_ind_to_bar)) + 5)[2:-1]
 
         for y_end in y_ends:
-            plt.plot([x_col[0], x_col[-1]], [y_end, y_end], marker=".", c='k')
+            plt.plot([x_col[0], x_col[-1]], [y_end, y_end], marker=".", c='k', linewidth=non_sig_lw)
 
         x_col = x_col[1:-1]
 
@@ -528,7 +539,7 @@ def plot_curves_with_ranked_legends(
             for key_bar in key_bars:
                 y0 = y_ends[rank_of_key[key_bar[0]]]
                 y1 = y_ends[rank_of_key[key_bar[1]]]
-                ax.plot([x_col[x_ind], x_col[x_ind]], [y0, y1], c="k", linewidth=3)
+                ax.plot([x_col[x_ind], x_col[x_ind]], [y0, y1], c="k", linewidth=non_sig_lw)
 
     for i, data_key in enumerate(sorted_data_keys):
         y = data_y[data_key]
