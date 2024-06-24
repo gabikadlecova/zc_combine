@@ -1,5 +1,5 @@
 # GRAF - Surprisingly Strong Performance Prediction with Neural Graph Features
-Main repository for running **GRAF** and zero-cost proxy experiments for our paper "[Surprisingly Strong Performance Prediction with Neural Graph Features](https://openreview.net/forum?id=EhPpZV6KLk)" ([arXiv](https://arxiv.org/abs/2404.16551)).
+Main repository for running **GRAF** and zero-cost proxy experiments for our paper "[Surprisingly Strong Performance Prediction with Neural Graph Features](https://openreview.net/forum?id=EhPpZV6KLk)" ([paper](https://openreview.net/forum?id=EhPpZV6KLk)).
 
 ```
 @inproceedings{kadlecova2024surprisingly,
@@ -11,7 +11,8 @@ url={https://openreview.net/forum?id=EhPpZV6KLk}
 }
 ```
 
-Note #1: this repository mainly serves for reproducing the experiments of our paper. A refactored version where it will be easier to use GRAF in you research will be available in June/July 2024 as a separate repository.
+**Note #1**: We provide a **refactored version of [GRAF](https://www.github.com/gabikadlecova/GRAF)** that can be integrated
+more easily into your research (the repository may still slightly change during July '24). This repository (`zc_combine`) mainly serves for reproducing the experiments of our paper.
 
 Note #2: the name of the repository is `zc_combine`, as we originally started just
 with exploring zero-cost proxy combinations, and then discovered the strength graph features.
@@ -194,5 +195,8 @@ experiments/nb201_selected/
 experiments/nb301_selected/
 ```
 
-## BRP-NAS
-We modified the original [BRP-NAS](https://github.com/SamsungLabs/eagle) code to run our GRAF + ZCP + BRP-NAS experiments. Refer to supplementary materials in [OpenReview](https://openreview.net/forum?id=EhPpZV6KLk) for the modified code.
+## BRP-NAS, TA-GATES, NASLib
+We modified the original [BRP-NAS](https://github.com/SamsungLabs/eagle) code to run our GRAF + ZCP + BRP-NAS experiments.
+We also modified NASLib and TA-GATES code to work with GRAF for the NASLib prediction and search experiments.
+Since openreview supplementary is not public, contact us if you want to use the modified versions of the
+code (it will be uploaded somewhere public during July '24).
