@@ -96,7 +96,7 @@ def _max_num_path(G, start, end, compute_weight):
     except (nx.NodeNotFound, nx.NetworkXNoPath):
         return 0
 
-    n_on_path = len(path) - 1
+    n_on_path = len(path)
     return n_on_path
 
 
@@ -113,8 +113,10 @@ def max_num_on_path_opnodes(net, allowed, start=0, end=1):
         return -1
 
     start, end = get_start_end(ops, start, end)
+    path_len = _max_num_path(G_allowed, start, end, compute_weight) - 2
 
-    return _max_num_path(G_allowed, start, end, compute_weight)
+    # number of nodes except input and output
+    return path_len - 2
 
 
 def max_num_on_path(net, allowed, start=1, end=4):
@@ -123,4 +125,7 @@ def max_num_on_path(net, allowed, start=1, end=4):
     def compute_weight(start, end, _):
         return -1
 
-    return _max_num_path(to_graph([k for k in edges.keys() if edges[k] in allowed]), start, end, compute_weight)
+    path_len = _max_num_path(to_graph([k for k in edges.keys() if edges[k] in allowed]), start, end, compute_weight)
+
+    # adjust by 1 -> edge count
+    return path_len - 1
