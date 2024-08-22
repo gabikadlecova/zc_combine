@@ -36,11 +36,11 @@ def get_node_degrees(cells, allowed):
 
 
 def _get_both_max_paths(net, allowed):
-    if 'out' not in allowed:
+    if 0 not in allowed:
         if isinstance(allowed, set):
-            allowed.add('out')
+            allowed.add(0)
         else:
-            allowed = [*allowed, 'out']
+            allowed = [*allowed, 0]
 
     input1, input2, output = get_special_nodes()
 
